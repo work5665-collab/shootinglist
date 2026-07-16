@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>스마트 현장 촬영 계획표</title>
+    <style>
+        :root {
+            --primary-color: #4f46e5;
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --text-color: #f8fafc;
+            --border-color: #334155;
+            --grid-color: #1e293b;
+            --accent-color: #f59e0b;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            padding: 15px;
+            overflow-x: hidden;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        h1 {
+            font-size: 1.2rem;
+            font-weight: 700;
+        }
+
+        button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        button.secondary {
+            background-color: #475569;
+        }
+
+        /* 메인 레이아웃: 가로 스크롤 가능한 타임라인 */
+        .timeline-container {
+            background: var(--card-bg);
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            overflow-x: auto;
+            position: relative;
+            margin-bottom: 20px;
+        }
+
+        .timeline-table {
+            display: grid;
+            grid-template-columns: 250px 1fr; /* 업무명 영역 | 타임라인 영역 */
+            min-width: 1200px;
+        }
+
+        /* 헤더 영역 */
+        .table-header {
+            background-color: #111827;
+            font-weight: bold;
+            border-bottom: 2px solid var(--border-color);
+            height: 45px;
+            display: flex;
+            align-items: center;
+        }
+
+        .header-task {
+            padding: 10px;
+            width: 250px;
+            border-right: 1px solid var(--border-color);
+        }
+
+        .header-time-grid {
+            display: grid;
+            grid-template-columns: repeat(24, 1fr); /* 2시간 기준, 5분단위 24칸 예시 */
+            width: 100%;
+            height: 100%;
+        }
+
+        .time-slot-header {
+            border-right: 1px solid var(--border-color);
+            text-align: center;
+            font-size: 0.75rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            background: #111827;
+        }
+
+        /* 행 (Row) 디자인 */
+        .task-row {
+            display: grid;
+            grid-template-columns: 250px 1fr;
+            border-bottom: 1px solid var(--border-color);
+            transition: all 0.3s ease;
+        }
+
+        .task-row.completed {
+            opacity: 0.3;
+            background-color: #0f172a;
+        }
+
+        .task-row.completed-hidden {
+            display: none; /* 완료된 것 숨기기용 */
+        }
+
+        /* 업무 컨트롤부 */
+        .task-info {
+            padding: 10px;
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: #1e293b;
+        }
+
+        .task-info input[type="text"] {
+            background: transparent;
+            border: none;
+            color: var(--text-color);
+            font-size: 0.9rem;
+            width: 100%;
+            font-weight: 500;
+        }
+
+        .task-info input[type="text"]:focus {
+            outline: 1px solid var(--primary-color);
+            background: #0f172a;
+        }
+
+        .btn-check {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            border: 2px solid #64748b;
+            background: transparent;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: transparent;
+            font-weight: bold;
+            font-size: 0.8rem;
+        }
+
+        .completed .btn-check {
+            background: #10b981;
+            border-color: #10b981;
+            color: white;
+        }
+
+        /* 타임라인 그리드 채우기 */
+        .timeline-grid {
+            display: grid;
+            grid-template-columns: repeat(120, 1fr); /* 5분 단위 총 120칸 (10시간 분량) */
+            background-size: calc(100% / 120) 100%;
+            position: relative;
+        }
+
+        .grid-cell {
+            border-right: 1px dashed #334155;
+            height: 55px;
+            cursor: pointer;
+        }
+
+        .grid-cell:nth-child(12n) { /* 1시간마다 실선 구분 */
+            border-right: 2px solid #475569;
+        }
+
+        /* 활성화된 타임 바 (오렌지색) */
+        .time-bar {
+            position: absolute;
+            height: 70%;
+            top: 15%;
+            background: linear-gradient(90deg, #f59e0b, #d97706);
+            border-radius: 6px;
+            pointer-events: none;
+            box-shadow: 0 0 8px rgba(245, 158, 11, 0.4);
+        }
+
+        /* 완료 목록 영역 */
+        .completed-section {
+            margin-top: 15px;
+            background: #111827;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            padding: 10px;
+        }
+
+        .completed-trigger {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.9rem;
+            color: #94a3b8;
+        }
+
+        .completed-list {
+            margin-top: 10px;
+            display: none;
+        }
+
+        .completed-list.active {
+            display: block;
+        }
+
+        .action-group {
+            display: flex;
+            gap: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div>
+            <h1>🎬 촬영 마스터 플랜 (5분 단위 멀티 템플릿)</h1>
+        </div>
+        <div class="action-group">
+            <button onclick="addNewRow()">＋ 액션 아이템 추가</button>
+            <button class="secondary" onclick="toggleCompletedSection()">👁️ 완료된 항목 열기/닫기</button>
+        </div>
+    </header>
+
+    <div class="timeline-container">
+        <div class="timeline-table">
+            <div class="table-header">
+                <div class="header-task">액션 아이템 (진행 업무)</div>
+                <div style="display: flex; width: 100%;">
+                    <div style="display: grid; grid-template-columns: repeat(10, 1fr); width: 100%;">
+                        <div class="time-slot-header">08:00</div>
+                        <div class="time-slot-header">09:00</div>
+                        <div class="time-slot-header">10:00</div>
+                        <div class="time-slot-header">11:00</div>
+                        <div class="time-slot-header">12:00</div>
+                        <div class="time-slot-header">13:00</div>
+                        <div class="time-slot-header">14:00</div>
+                        <div class="time-slot-header">15:00</div>
+                        <div class="time-slot-header">16:00</div>
+                        <div class="time-slot-header">17:00</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="task-rows-container">
+            </div>
+    </div>
+
+    <div class="completed-section">
+        <div class="completed-trigger" onclick="toggleCompletedSection()">
+            <span>📦 완료된 액션 보기 (<span id="completed-count">0</span>)</span>
+            <span>▼</span>
+        </div>
+        <div id="completed-list" class="completed-list">
+            </div>
+    </div>
+
+    <script>
+        // 초기 템플릿 데이터 (자유롭게 추가/삭제 가능)
+        let tasks = [
+            { id: 1, name: "장비 세팅 및 구도 잡기", startCell: 0, endCell: 12, completed: false },
+            { id: 2, name: "A 카메라 바스트 샷 촬영", startCell: 12, endCell: 24, completed: false },
+            { id: 3, name: "B 마이크 음향 체크 및 조명 조절", startCell: 6, endCell: 18, completed: false }
+        ];
+
+        const totalCells = 120; // 5분 단위 * 12칸 * 10시간 = 120칸
+
+        function render() {
+            const container = document.getElementById('task-rows-container');
+            const completedList = document.getElementById('completed-list');
+            container.innerHTML = '';
+            completedList.innerHTML = '';
+
+            let completedCount = 0;
+
+            tasks.forEach(task => {
+                const row = document.createElement('div');
+                row.className = `task-row ${task.completed ? 'completed' : ''}`;
+                
+                // 1. 업무명과 체크버튼 영역
+                const infoDiv = document.createElement('div');
+                infoDiv.className = 'task-info';
+                
+                const checkBtn = document.createElement('button');
+                checkBtn.className = 'btn-check';
+                checkBtn.innerHTML = '✓';
+                checkBtn.onclick = () => toggleComplete(task.id);
+                
+                const inputName = document.createElement('input');
+                inputName.type = 'text';
+                inputName.value = task.name;
+                inputName.onchange = (e) => { task.name = e.target.value; };
+
+                infoDiv.appendChild(checkBtn);
+                infoDiv.appendChild(inputName);
+                row.appendChild(infoDiv);
+
+                // 2. 5분 단위 그리드 영역
+                const gridDiv = document.createElement('div');
+                gridDiv.className = 'timeline-grid';
+                gridDiv.style.width = '100%';
+
+                // 드래그 또는 터치 입력을 위한 임시 변수
+                let isSelecting = false;
+                let startIdx = null;
+
+                for (let i = 0; i < totalCells; i++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'grid-cell';
+                    
+                    // 직관적인 클릭/터치 이벤트 (처음 클릭한 곳과 마지막 뗀 곳을 시간 범위로 지정)
+                    cell.onmousedown = () => {
+                        isSelecting = true;
+                        startIdx = i;
+                    };
+
+                    cell.onmouseup = () => {
+                        if (isSelecting) {
+                            task.startCell = Math.min(startIdx, i);
+                            task.endCell = Math.max(startIdx, i) + 1;
+                            isSelecting = false;
+                            render();
+                        }
+                    };
+
+                    gridDiv.appendChild(cell);
+                }
+
+                // 지정된 시간 영역에 오렌지색 Bar 그리기
+                if (task.startCell !== null && task.endCell !== null) {
+                    const bar = document.createElement('div');
+                    bar.className = 'time-bar';
+                    const leftPercent = (task.startCell / totalCells) * 100;
+                    const widthPercent = ((task.endCell - task.startCell) / totalCells) * 100;
+                    bar.style.left = `${leftPercent}%`;
+                    bar.style.width = `${widthPercent}%`;
+                    gridDiv.appendChild(bar);
+                }
+
+                row.appendChild(gridDiv);
+
+                // 화면 렌더링 분기: 완료 여부에 따라 배치
+                if (task.completed) {
+                    completedCount++;
+                    const clone = row.cloneNode(true);
+                    // 클론된 요소에도 클릭 이벤트 바인딩
+                    clone.querySelector('.btn-check').onclick = () => toggleComplete(task.id);
+                    completedList.appendChild(clone);
+                } else {
+                    container.appendChild(row);
+                }
+            });
+
+            document.getElementById('completed-count').innerText = completedCount;
+        }
+
+        // 새 행 추가
+        function addNewRow() {
+            const newId = tasks.length ? Math.max(...tasks.map(t => t.id)) + 1 : 1;
+            tasks.push({
+                id: newId,
+                name: `새 촬영 항목 (더블클릭하여 수정)`,
+                startCell: 0,
+                endCell: 12,
+                completed: false
+            });
+            render();
+        }
+
+        // 토글 완료 처리
+        function toggleComplete(id) {
+            const task = tasks.find(t => t.id === id);
+            if (task) {
+                task.completed = !task.completed;
+                render();
+            }
+        }
+
+        // 아래 완료 리스트 펼치기/접기
+        function toggleCompletedSection() {
+            const list = document.getElementById('completed-list');
+            list.classList.toggle('active');
+        }
+
+        // 초기 빌드
+        render();
+    </script>
+</body>
+</html>
