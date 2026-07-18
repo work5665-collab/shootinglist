@@ -15,7 +15,6 @@
             --primary-hover: #2563eb;
             --success-color: #10b981;
             --danger-color: #ef4444;
-            --gap-bar-color: #0d9488;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: sans-serif; user-select: none; }
@@ -55,7 +54,7 @@
         .table-header { display: flex; flex-direction: column; background: #111827; border-bottom: 2px solid var(--border-color); }
         .header-row { display: flex; }
         .header-frozen-zone {
-            width: 380px; min-width: 380px; padding-left: 15px; display: flex; align-items: center;
+            width: 420px; min-width: 420px; padding-left: 15px; display: flex; align-items: center;
             font-weight: bold; font-size: 0.85rem; color: var(--text-muted); border-right: 2px solid var(--border-color);
             background: #0f172a; position: sticky; left: 0; z-index: 25; height: 42px;
         }
@@ -67,7 +66,6 @@
         }
         .main-time-cell:hover { background: #1e293b; }
         
-        .sub-tick-row { display: flex; background: #0b0f19; height: 24px; border-bottom: 1px solid var(--border-color); }
         .sub-tick-cell {
             border-right: 1px dashed rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center;
             font-size: 0.65rem; color: var(--text-muted); font-family: monospace; cursor: pointer;
@@ -79,22 +77,28 @@
         .task-row.hidden-node { display: none; }
         
         .task-left-panel {
-            width: 380px; min-width: 380px; padding: 6px 12px; border-right: 2px solid var(--border-color);
-            display: flex; align-items: center; gap: 8px; background: #1e293b; position: sticky; left: 0; z-index: 15;
+            width: 420px; min-width: 420px; padding: 6px 8px; border-right: 2px solid var(--border-color);
+            display: flex; align-items: center; gap: 6px; background: #1e293b; position: sticky; left: 0; z-index: 15;
         }
 
-        .indent-space { display: inline-block; width: 16px; }
-        .toggle-arrow { cursor: pointer; color: #f59e0b; font-weight: bold; padding: 0 4px; }
-        .task-checkbox { width: 18px; height: 18px; cursor: pointer; z-index: 5; }
+        .indent-space { display: inline-block; width: 12px; }
+        .toggle-arrow { cursor: pointer; color: #f59e0b; font-weight: bold; padding: 0 2px; font-size: 0.8rem; }
+        .task-checkbox { width: 16px; height: 16px; cursor: pointer; z-index: 5; }
         
-        .color-dot-palette { display: flex; gap: 3px; }
-        .color-dot { width: 10px; height: 10px; border-radius: 5px; cursor: pointer; border: 1px solid rgba(255,255,255,0.2); }
+        .color-dot-palette { display: flex; gap: 2px; }
+        .color-dot { width: 8px; height: 8px; border-radius: 4px; cursor: pointer; border: 1px solid rgba(255,255,255,0.2); }
 
         .task-name-input {
             background: transparent; border: 1px solid transparent; color: var(--text-color);
-            font-size: 0.85rem; flex: 1; padding: 4px; border-radius: 4px; font-weight: bold; cursor: pointer;
+            font-size: 0.8rem; flex: 1; padding: 4px; border-radius: 4px; font-weight: bold; cursor: pointer; min-width: 0;
         }
         .task-name-input:focus { background: #0f172a; border-color: var(--primary-color); outline: none; cursor: text; }
+
+        /* 🛠️ 상하위 이동용 드롭다운 스타일 디자인 */
+        .parent-selector {
+            background: #0f172a; color: var(--text-muted); border: 1px solid var(--border-color);
+            font-size: 0.7rem; padding: 2px; border-radius: 4px; width: 65px; cursor: pointer;
+        }
 
         .task-right-track { position: relative; display: flex; background: #0f172a; height: 52px; }
         .track-grid-unit { border-right: 1px dashed rgba(51, 65, 85, 0.2); height: 100%; }
@@ -105,7 +109,6 @@
             box-shadow: 0 4px 6px rgba(0,0,0,0.3); cursor: pointer; z-index: 5;
         }
         
-        /* 🛠️ 자동 여백 전용 에메랄드 빗금 텍스처 스타일링 */
         .time-bar-element.auto-gap-bar {
             background: repeating-linear-gradient(45deg, #115e59, #115e59 8px, #134e4a 8px, #134e4a 16px) !important;
             border: 1px dashed #2dd4bf;
@@ -159,7 +162,6 @@
     </div>
 
     <script>
-        // 🛠️ 시간 엔진 핵심: 2026년 절대 일 단위 스케일 매퍼 구조 (전체 365일 기반으로 버그 완전 원천 차단)
         const MONTH_DAYS = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
         const MONTH_STARTS = [];
         let acc = 0;
@@ -173,12 +175,12 @@
             focusMonth: 0,   
             focusWeek: 0,    
             focusDay: 0,     
-            projectFocusId: null, // 🛠️ 프로젝트별 집중 뷰 식별자 코드 추가
+            projectFocusId: null, 
             cellWidth: 60,
             titleBackup: "",
             inputBackups: {},
             collapsedNodes: {},
-            // 초기 모형 데이터 세팅 (2026년 절대 누적 Day 값 기반)
+            colorPointer: 0, // 하위 목록 색상 순환용 포인터
             tasks: [
                 { id: "p-1", parentId: null, name: "메인 프로덕션 빌드업", start: 0, end: 85, color: "#3b82f6", checked: false },
                 { id: "p-2", parentId: "p-1", name: "세부 연출 콘티 확정", start: 0, end: 35, color: "#a855f7", checked: false },
@@ -190,7 +192,6 @@
         const DAYS_OF_WEEK = ["일", "월", "화", "수", "목", "금", "토"];
 
         function getDayOfWeekString(dayIndex) {
-            // 2026년 1월 1일은 목요일(4)에서 기인함
             let d = new Date(2026, 0, dayIndex + 1);
             return DAYS_OF_WEEK[d.getDay()];
         }
@@ -211,7 +212,7 @@
         }
 
         function init() {
-            const saved = localStorage.getItem('onset_tracker_absolute_v12');
+            const saved = localStorage.getItem('onset_tracker_absolute_v15');
             if (saved) state = JSON.parse(saved);
             setupTitleInput();
             fillTimeGapsWithTasks();
@@ -219,7 +220,7 @@
         }
 
         function saveData() {
-            localStorage.setItem('onset_tracker_absolute_v12', JSON.stringify(state));
+            localStorage.setItem('onset_tracker_absolute_v15', JSON.stringify(state));
         }
 
         function setupTitleInput() {
@@ -269,7 +270,6 @@
             renderAll();
         }
 
-        // 🛠️ 현재 활성화된 화면 스케일 범위 구하기 (절대 좌표 역산용 함수)
         function getActiveTimeRange() {
             if (state.viewMode === 'ALL') return { start: 0, end: 365, step: 'MONTH' };
             if (state.viewMode === 'MONTH') {
@@ -300,8 +300,6 @@
 
             const g1 = document.createElement('div'); g1.className = 'header-grid-zone';
             const g2 = document.createElement('div'); g2.className = 'header-grid-zone';
-
-            let range = getActiveTimeRange();
 
             if (state.viewMode === 'ALL') {
                 for (let m = 0; m < 12; m++) {
@@ -376,49 +374,64 @@
             wrapper.appendChild(row1); wrapper.appendChild(row2);
         }
 
-        // 🛠️ 여백 자동 역산 메우기 파트 (디폴트 텍스트 '휴식 및 정비' 탑재)
+        // 🛠️ 대대적 알고리즘 튜닝: 형제 항목들 전체 집합의 '순수 공백(Timeline Union Complement)'을 역산하여 중복 완벽 제거
         function fillTimeGapsWithTasks() {
             let parentIds = [...new Set(state.tasks.map(t => t.parentId).filter(p => p !== null))];
             let createdAny = false;
 
-            // 기존 자동 생성되었던 여백 중 변경 안 된 기본 항목 지우고 재계산
+            // 순수 갭 자동 생성 항목 초기화 (텍스트를 직접 편집해서 사용 중인 항목은 보존)
             state.tasks = state.tasks.filter(t => !t.id.startsWith('auto-gap-') || t.name !== '휴식 및 정비');
 
             parentIds.forEach(pId => {
                 let parent = state.tasks.find(t => t.id === pId);
                 if (!parent) return;
 
-                let children = state.tasks.filter(t => t.parentId === pId).sort((a,b) => a.start - b.start);
-                if (children.length === 0) return;
+                // 해당 부모 아래 소속된 모든 커스텀 자식 항목들 수집
+                let children = state.tasks.filter(t => t.parentId === pId && t.color !== 'auto-gap-emerald');
+                
+                // 시간축 타임 라인 맵 배열 생성 (부모의 스케일 길이만큼 크기 할당)
+                let parentDuration = parent.end - parent.start;
+                if (parentDuration <= 0) return;
 
-                let currentPointer = parent.start;
-                children.forEach(child => {
-                    if (child.start > currentPointer) {
-                        state.tasks.push({
-                            id: "auto-gap-" + Date.now() + "-" + Math.random(),
-                            parentId: pId,
-                            name: "휴식 및 정비", // 🛠️ 기본 플레이스홀더 텍스트 변경
-                            start: currentPointer,
-                            end: child.start,
-                            color: "auto-gap-emerald", 
-                            checked: false
-                        });
-                        createdAny = true;
+                let occupied = new Array(parentDuration).fill(false);
+
+                // 자식들이 점유한 영역을 타임 블록 맵에 꼼꼼히 기록
+                children.forEach(c => {
+                    let relStart = Math.max(0, c.start - parent.start);
+                    let relEnd = Math.min(parentDuration, c.end - parent.start);
+                    for (let i = relStart; i < relEnd; i++) {
+                        occupied[i] = true;
                     }
-                    currentPointer = Math.max(currentPointer, child.end);
                 });
 
-                if (currentPointer < parent.end) {
-                    state.tasks.push({
-                        id: "auto-gap-" + Date.now() + "-" + Math.random(),
-                        parentId: pId,
-                        name: "휴식 및 정비",
-                        start: currentPointer,
-                        end: parent.end,
-                        color: "auto-gap-emerald",
-                        checked: false
-                    });
-                    createdAny = true;
+                // 점유되지 않은 연속된 공백(여백) 구간 검출 스캐너 구동
+                let inGap = false;
+                let gapStart = 0;
+
+                for (let i = 0; i <= parentDuration; i++) {
+                    let isVacant = (i < parentDuration) ? !occupied[i] : false;
+
+                    if (!inGap && isVacant) {
+                        inGap = true;
+                        gapStart = i;
+                    } else if (inGap && !isVacant) {
+                        inGap = false;
+                        let absStart = parent.start + gapStart;
+                        let absEnd = parent.start + i;
+
+                        if (absStart < absEnd) {
+                            state.tasks.push({
+                                id: "auto-gap-" + Date.now() + "-" + Math.random(),
+                                parentId: pId,
+                                name: "휴식 및 정비",
+                                start: absStart,
+                                end: absEnd,
+                                color: "auto-gap-emerald",
+                                checked: false
+                            });
+                            createdAny = true;
+                        }
+                    }
                 }
             });
 
@@ -437,7 +450,6 @@
             return false;
         }
 
-        // 🛠️ 프로젝트 딜리게이트 하위 자식 목록만 스케일 트랙킹 필터 서브 시스템
         function isFilteredByProjectFocus(task) {
             if (!state.projectFocusId) return false;
             if (task.id === state.projectFocusId) return false;
@@ -472,6 +484,59 @@
             });
         }
 
+        // 🛠️ 상하위 계층 이동 모듈용 트리 구조 변경 핸들러
+        function changeTaskParent(taskId, newParentId) {
+            let task = state.tasks.find(t => t.id === taskId);
+            if (!task) return;
+
+            let oldParentId = task.parentId;
+
+            if (newParentId === "NONE") {
+                task.parentId = null;
+            } else {
+                // 순환 참조(자식을 자기 부모로 선택하는 현상) 방지 코드 가드
+                let p = state.tasks.find(t => t.id === newParentId);
+                let cyclical = false;
+                while (p) {
+                    if (p.id === taskId) { cyclical = true; break; }
+                    p = state.tasks.find(t => t.id === p.parentId);
+                }
+                if (!cyclical) task.parentId = newParentId;
+            }
+
+            // 부모 구조가 바뀐 항목의 색상이 'auto-gap-emerald'라면 일반 업무 컬러로 강제 변환
+            if (task.color === 'auto-gap-emerald') {
+                task.color = PALETTE[0];
+            }
+
+            updateParentTimeChain(oldParentId);
+            updateParentTimeChain(task.parentId);
+            fillTimeGapsWithTasks();
+            saveData(); renderAll();
+        }
+
+        // 🛠️ 간편 간결 원터치 항목 복제 기능
+        function duplicateTask(taskId) {
+            let src = state.tasks.find(t => t.id === taskId);
+            if (!src) return;
+
+            let newId = "p_" + Date.now() + "_" + Math.floor(Math.random()*1000);
+            let dup = {
+                id: newId,
+                parentId: src.parentId,
+                name: src.name + " (복사본)",
+                start: src.start,
+                end: src.end,
+                color: src.color === 'auto-gap-emerald' ? PALETTE[0] : src.color,
+                checked: false
+            };
+
+            state.tasks.push(dup);
+            updateParentTimeChain(src.parentId);
+            fillTimeGapsWithTasks();
+            saveData(); renderAll();
+        }
+
         function renderRows() {
             const container = document.getElementById('dynamic-rows-container');
             container.innerHTML = '';
@@ -489,10 +554,12 @@
             }
             buildTree(null);
 
+            // 최상위 및 그룹 항목들 목록 추출 (드롭다운 바인딩용 세트)
+            let potentialParents = state.tasks.filter(t => t.color !== 'auto-gap-emerald');
+
             treeSorted.forEach(task => {
                 if (isAncestorCollapsed(task) || isFilteredByProjectFocus(task)) return;
 
-                // 🛠️ 이번 4월 먹통 버그 원천 차단부: 현재 타임 슬롯 범위 내에 안 걸쳐져 있으면 행은 띄우되 인디케이터만 가드 처리
                 let isParentNode = state.tasks.some(t => t.parentId === task.id);
                 const row = document.createElement('div');
                 row.className = `task-row ${task.checked ? 'completed-shading' : ''}`;
@@ -535,19 +602,49 @@
                 nameInput.onkeydown = (e) => {
                     if (e.key === 'Enter') {
                         state.inputBackups[task.id] = nameInput.value;
-                        task.name = nameInput.value; nameInput.blur(); saveData(); renderRows();
+                        task.name = nameInput.value; 
+                        
+                        // 만약 자동 생성 여백 항목의 텍스트를 고쳤다면 실제 일반 개별 태스크 처리 격상 유도
+                        if (task.id.startsWith('auto-gap-')) {
+                            task.color = PALETTE[0]; 
+                        }
+                        
+                        nameInput.blur(); fillTimeGapsWithTasks(); saveData(); renderAll();
                     } else if (e.key === 'Escape') {
                         nameInput.value = state.inputBackups[task.id]; nameInput.blur();
                     }
                 };
                 left.appendChild(nameInput);
 
-                const subAddBtn = document.createElement('button'); subAddBtn.style.padding = '3px 6px'; subAddBtn.style.fontSize = '0.7rem'; subAddBtn.innerText = "➕";
+                // 🛠️ 상하위 이동용 드롭다운 구조 UI 배치 구현부
+                const sel = document.createElement('select'); sel.className = 'parent-selector';
+                sel.innerHTML = `<option value="NONE">최상위</option>`;
+                potentialParents.forEach(p => {
+                    if (p.id !== task.id) {
+                        let selectedAttr = (task.parentId === p.id) ? 'selected' : '';
+                        sel.innerHTML += `<option value="${p.id}" ${selectedAttr}>포함: ${p.name.substring(0,6)}...</option>`;
+                    }
+                });
+                sel.onchange = (e) => { changeTaskParent(task.id, e.target.value); };
+                left.appendChild(sel);
+
+                // 🛠️ 간편 원터치 복제 버튼 주입 구현부
+                const dupBtn = document.createElement('button'); dupBtn.style.padding = '3px 5px'; dupBtn.style.fontSize = '0.7rem'; dupBtn.style.backgroundColor = '#4b5563'; dupBtn.innerText = "📋";
+                dupBtn.title = "이 항목 간편 복제";
+                dupBtn.onclick = () => { duplicateTask(task.id); };
+                left.appendChild(dupBtn);
+
+                const subAddBtn = document.createElement('button'); subAddBtn.style.padding = '3px 5px'; subAddBtn.style.fontSize = '0.7rem'; subAddBtn.innerText = "➕";
                 subAddBtn.onclick = () => { addChildRow(task.id); };
                 left.appendChild(subAddBtn);
 
-                const delBtn = document.createElement('button'); delBtn.className = 'danger'; delBtn.style.padding = '3px 6px'; delBtn.innerText = "✕";
-                delBtn.onclick = () => { state.tasks = state.tasks.filter(t => t.id !== task.id); saveData(); renderAll(); };
+                const delBtn = document.createElement('button'); delBtn.className = 'danger'; delBtn.style.padding = '3px 5px'; delBtn.innerText = "✕";
+                delBtn.onclick = () => { 
+                    let pId = task.parentId;
+                    state.tasks = state.tasks.filter(t => t.id !== task.id); 
+                    if(pId) updateParentTimeChain(pId);
+                    fillTimeGapsWithTasks(); saveData(); renderAll(); 
+                };
                 left.appendChild(delBtn);
 
                 row.appendChild(left);
@@ -560,14 +657,12 @@
                     rightTrack.appendChild(unit);
                 }
 
-                // 🛠️ 날짜 절대 좌표 매핑 렌더링 로직 연산부
                 let barRenderable = false;
                 let renderLeftCell = 0;
                 let renderWidthCells = 0;
                 let unitText = "";
 
                 if (state.viewMode === 'ALL') {
-                    // 전체 연간 뷰에서는 '주차(총 52~53개 단위)'로 압축 분할 매핑
                     let totalYearWeeks = 52; 
                     let sWeek = Math.floor((task.start / 365) * totalYearWeeks);
                     let eWeek = Math.ceil((task.end / 365) * totalYearWeeks);
@@ -578,7 +673,6 @@
                         unitText = `${Math.ceil((task.end - task.start)/7)}주간`;
                     }
                 } else if (state.viewMode === 'MONTH' || state.viewMode === 'WEEK') {
-                    // 일자별 절대값 교차 범위 연산
                     let oStart = Math.max(timeConfig.start, task.start);
                     let oEnd = Math.min(timeConfig.end, task.end);
                     if (oStart < oEnd) {
@@ -600,7 +694,6 @@
                     const bar = document.createElement('div'); 
                     bar.className = 'time-bar-element';
                     
-                    // 🛠️ 자동 여백 항목 전용 비주얼 클래스 바인딩 분리 분기문
                     if (task.color === 'auto-gap-emerald') {
                         bar.classList.add('auto-gap-bar');
                     } else {
@@ -614,10 +707,17 @@
                     const lbl = document.createElement('div'); lbl.className = 'bar-label';
                     lbl.innerHTML = `<span>⏳ ${task.name} (${unitText})</span>`;
                     
-                    // 🛠️ 레이블 클릭 시 해당 프로젝트 묶음 집중뷰로 대전환 트리거 추가
-                    lbl.onclick = (e) => {
+                    // 🛠️ 충돌 방지 가드가 적용된 정밀 프로젝트 집중뷰 트리거 시스템
+                    let clickMoveGuard = false;
+                    lbl.onmousedown = (e) => {
+                        clickMoveGuard = false;
+                    };
+                    lbl.onmousemove = () => {
+                        clickMoveGuard = true; // 드래그 중일 땐 집중뷰 이벤트 발동안함
+                    };
+                    lbl.onmouseup = (e) => {
                         e.stopPropagation();
-                        if (isParentNode) {
+                        if (!clickMoveGuard && isParentNode) {
                             state.projectFocusId = task.id;
                             saveData(); renderAll();
                         }
@@ -625,7 +725,6 @@
 
                     const hR = document.createElement('div'); hR.className = 'resizer';
 
-                    // 🛠️ 피드백 반영: 상위 부모 항목은 좌우 조절 레버(hL, hR)를 비활성화하고 '가운데 잡고 드래그 이동'만 허용
                     if (!isParentNode) {
                         bar.appendChild(hL); bar.appendChild(lbl); bar.appendChild(hR);
                         hL.onmousedown = (e) => { e.stopPropagation(); startDrag(task.id, 'left', e.clientX); };
@@ -633,7 +732,6 @@
                         lbl.onmousedown = (e) => { e.stopPropagation(); if (e.buttons === 1) startDrag(task.id, 'move', e.clientX); };
                     } else {
                         bar.appendChild(lbl);
-                        // 상위 항목 마우스 무브 드래그 허용 전환 부문
                         lbl.style.cursor = 'move';
                         lbl.onmousedown = (e) => { e.stopPropagation(); if (e.buttons === 1) startDrag(task.id, 'move', e.clientX); };
                     }
@@ -664,7 +762,6 @@
             let deltaX = e.clientX - dragStartX;
             let cellDelta = Math.round(deltaX / state.cellWidth);
 
-            // 날짜 연산 보정 배율 필터링 조정
             if (state.viewMode === 'ALL') {
                 cellDelta = Math.round(cellDelta * (365 / 52));
             }
@@ -678,7 +775,6 @@
                 if (ns >= 0 && ne <= 365) { 
                     task.start = ns; 
                     task.end = ne; 
-                    // 🛠️ 상위 항목 전동 드래그 시 자식 하위 요소들 세트 동시 무브 연동 작동
                     moveAllChildrenSet(task.id, cellDelta);
                 }
             } else if (dragType === 'left') {
@@ -689,7 +785,6 @@
                 if (ne > task.start && ne <= 365) task.end = ne;
             }
 
-            // 부모 연쇄 상하위 노드 강제 트랙 오토 연동 조율
             updateParentTimeChain(task.parentId);
             renderRows();
         }
@@ -715,10 +810,15 @@
 
         function addChildRow(pId) {
             let p = state.tasks.find(t => t.id === pId);
+            
+            // 🛠️ 색상 팔레트 순서대로 자동 로테이션 분배
+            let assignedColor = PALETTE[state.colorPointer % PALETTE.length];
+            state.colorPointer++;
+
             state.tasks.push({
                 id: "p_" + Date.now(), parentId: pId,
                 name: "└ 세부 서브 태스크 라인", start: p.start, end: Math.min(p.end, p.start + 15),
-                color: "#a855f7", checked: false
+                color: assignedColor, checked: false
             });
             state.collapsedNodes[pId] = false;
             updateParentTimeChain(pId);
