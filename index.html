@@ -82,7 +82,6 @@
         .task-left-panel {
             width: 380px; min-width: 380px; padding: 6px 8px; border-right: 2px solid var(--border-color);
             display: flex; align-items: center; gap: 6px; background: #1e293b; position: sticky; left: 0; z-index: 15;
-            transition: background 0.2s;
         }
 
         .row-grab-handle {
@@ -112,6 +111,10 @@
             box-shadow: 0 4px 6px rgba(0,0,0,0.3); cursor: pointer; z-index: 5;
             margin-left: 6px; margin-right: 6px;
         }
+        .time-bar-element.rest-auto-bar {
+            background: repeating-linear-gradient(45deg, #334155, #334155 10px, #475569 10px, #475569 20px) !important;
+            opacity: 0.85; border: 1px dashed var(--text-muted);
+        }
 
         .bar-label { flex: 1; text-align: center; font-size: 0.75rem; font-weight: 700; color: white; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; padding: 0 4px; height: 100%; display: flex; align-items: center; justify-content: center; }
         .resizer { width: 8px; height: 100%; background: rgba(255, 255, 255, 0.2); cursor: ew-resize; z-index: 10; }
@@ -132,9 +135,7 @@
         <div class="title-container">
             <input type="text" id="main-title" class="title-input" value="🎬 On-Set Tracker Pro (초정밀 타임라인)">
         </div>
-        
         <div class="navigation-trail" id="nav-trail-container"></div>
-
         <div class="control-panel">
             <button onclick="addNewRow()">➕ 최상위 마스터 추가</button>
             <button class="secondary" onclick="adjustZoom(-10)">➖ 축소</button>
@@ -179,11 +180,10 @@
             titleBackup: "",
             inputBackups: {},
             collapsedNodes: {},
-            colorPointer: 0,
             tasks: [
-                { id: "p-1", parentId: null, name: "새로운 최상위 마스터 공정", start: 0, end: 85, color: "#3b82f6", checked: false },
-                { id: "p-2", parentId: "p-1", name: "└ 세부 서브 태스크 라인", start: 0, end: 45, color: "#a855f7", checked: false },
-                { id: "p-3", parentId: "p-1", name: "└ 세부 서브 태스크 라인", start: 45, end: 85, color: "#eab308", checked: false }
+                { id: "p-1", parentId: null, name: "새로운 최상위 마스터 공정", start: 0, end: 120, color: "#3b82f6", checked: false },
+                { id: "p-2", parentId: "p-1", name: "└ 세부 서브 태스크 라인 1", start: 0, end: 45, color: "#a855f7", checked: false },
+                { id: "p-3", parentId: "p-1", name: "└ 세부 서브 태스크 라인 2", start: 60, end: 120, color: "#a855f7", checked: false }
             ]
         };
 
@@ -211,14 +211,14 @@
         }
 
         function init() {
-            const saved = localStorage.getItem('onset_tracker_absolute_v22');
+            const saved = localStorage.getItem('onset_tracker_absolute_v23');
             if (saved) state = JSON.parse(saved);
             setupTitleInput();
             renderAll();
         }
 
         function saveData() {
-            localStorage.setItem('onset_tracker_absolute_v22', JSON.stringify(state));
+            localStorage.setItem('onset_tracker_absolute_v23', JSON.stringify(state));
         }
 
         function setupTitleInput() {
@@ -242,12 +242,6 @@
             if (state.viewMode === 'WEEK' || state.viewMode === 'DAY') {
                 html += ` <span>&gt;</span> <span class="trail-link" onclick="changeView('WEEK', ${state.focusMonth}, ${state.focusWeek})">${state.focusWeek + 1}주차</span>`;
             }
-            if (state.viewMode === 'DAY') {
-                let weeks = getWeeksMapOfMonth(state.focusMonth);
-                let dayAbs = weeks[state.focusWeek][state.focusDay];
-                let dateNum = dayAbs - MONTH_STARTS[state.focusMonth] + 1;
-                html += ` <span>&gt;</span> <span class="trail-link">${dateNum}일(${getDayOfWeekString(dayAbs)}) 초정밀</span>`;
-            }
             if (state.projectFocusId) {
                 let pTask = state.tasks.find(t => t.id === state.projectFocusId);
                 if (pTask) {
@@ -260,22 +254,16 @@
         function clearProjectFocus() { state.projectFocusId = null; saveData(); renderAll(); }
         function changeView(mode, m = 0, w = 0, d = 0) {
             state.viewMode = mode; state.focusMonth = m; state.focusWeek = w; state.focusDay = d;
-            state.cellWidth = (mode === 'DAY') ? 45 : 65;
             renderAll();
         }
 
         function getActiveTimeRange() {
-            if (state.viewMode === 'ALL') return { start: 0, end: 365, step: 'MONTH' };
-            if (state.viewMode === 'MONTH') return { start: MONTH_STARTS[state.focusMonth], end: MONTH_STARTS[state.focusMonth] + MONTH_DAYS[state.focusMonth], step: 'DAY' };
+            if (state.viewMode === 'ALL') return { start: 0, end: 365 };
+            if (state.viewMode === 'MONTH') return { start: MONTH_STARTS[state.focusMonth], end: MONTH_STARTS[state.focusMonth] + MONTH_DAYS[state.focusMonth] };
             if (state.viewMode === 'WEEK') {
                 let weeks = getWeeksMapOfMonth(state.focusMonth);
                 let currentWeek = weeks[state.focusWeek];
-                return { start: currentWeek[0], end: currentWeek[currentWeek.length - 1] + 1, step: 'DAY' };
-            }
-            if (state.viewMode === 'DAY') {
-                let weeks = getWeeksMapOfMonth(state.focusMonth);
-                let dayAbs = weeks[state.focusWeek][state.focusDay];
-                return { start: dayAbs, end: dayAbs + 1, step: 'MINUTE' };
+                return { start: currentWeek[0], end: currentWeek[currentWeek.length - 1] + 1 };
             }
         }
 
@@ -290,12 +278,15 @@
             const g2 = document.createElement('div'); g2.className = 'header-grid-zone';
 
             if (state.viewMode === 'ALL') {
+                // 🛠️ 11월, 12월 오차 없이 전체 일수(365일) 기준으로 정확히 배분 고정
                 for (let m = 0; m < 12; m++) {
-                    let weeks = getWeeksMapOfMonth(m);
-                    const cell = document.createElement('div'); cell.className = 'main-time-cell'; cell.style.width = `${state.cellWidth * weeks.length}px`;
+                    let mDays = MONTH_DAYS[m];
+                    const cell = document.createElement('div'); cell.className = 'main-time-cell'; cell.style.width = `${state.cellWidth * mDays}px`;
                     cell.innerText = `${m + 1}월`; cell.onclick = () => changeView('MONTH', m); g1.appendChild(cell);
+                    
+                    let weeks = getWeeksMapOfMonth(m);
                     weeks.forEach((wDays, wIdx) => {
-                        const sub = document.createElement('div'); sub.className = 'sub-tick-cell'; sub.style.width = `${state.cellWidth}px`; sub.innerText = `${wIdx + 1}주`;
+                        const sub = document.createElement('div'); sub.className = 'sub-tick-cell'; sub.style.width = `${state.cellWidth * wDays.length}px`; sub.innerText = `${wIdx + 1}주`;
                         sub.onclick = () => changeView('WEEK', m, wIdx); g2.appendChild(sub);
                     });
                 }
@@ -317,7 +308,7 @@
                     const sub = document.createElement('div'); sub.className = 'sub-tick-cell'; sub.style.width = `${state.cellWidth}px`;
                     let dateNum = absDay - MONTH_STARTS[state.focusMonth] + 1; let yoil = getDayOfWeekString(absDay);
                     sub.innerHTML = `${dateNum}일<span style="font-size:0.55rem;color:var(--text-muted);">(${yoil})</span>`;
-                    sub.onclick = () => changeView('DAY', state.focusMonth, state.focusWeek, dIdx); g2.appendChild(sub);
+                    g2.appendChild(sub);
                 });
             }
             row1.appendChild(g1); row2.appendChild(g2); wrapper.appendChild(row1); wrapper.appendChild(row2);
@@ -338,13 +329,14 @@
         function isFilteredByProjectFocus(task) {
             if (!state.projectFocusId) return false;
             if (task.id === state.projectFocusId) return false;
-            
             let p = state.tasks.find(t => t.id === task.parentId);
-            while(p) {
-                if (p.id === state.projectFocusId) return false;
-                p = state.tasks.find(t => t.id === p.parentId);
-            }
+            while(p) { if (p.id === state.projectFocusId) return false; p = state.tasks.find(t => t.id === p.parentId); }
             return true;
+        }
+
+        // 🛠️ 레벨별 테마 색상 강제 지정 처리 파트
+        function getColorByDepth(depth) {
+            return PALETTE[depth % PALETTE.length];
         }
 
         function updateParentTimeChain(parentId) {
@@ -368,46 +360,27 @@
         }
 
         let rowDragSourceId = null;
+        function onRowDragStart(e, id) { rowDragSourceId = id; e.dataTransfer.effectAllowed = "move"; }
 
-        function onRowDragStart(e, id) {
-            rowDragSourceId = id;
-            e.dataTransfer.effectAllowed = "move";
-        }
-
-        // 🛠️ 마우스가 좌측 영역(ClientX가 낮음)으로 치우치면 상위 계층(탈출) 모드로 감지하는 드래그 오버 시스템
         function onRowDragOver(e, targetId) {
-            e.preventDefault();
-            if (rowDragSourceId === targetId) return;
-            
-            const targetRow = document.getElementById(`row-node-${targetId}`);
-            if (!targetRow) return;
-
-            // 마우스의 절대 위치 좌표가 왼쪽 패널(380px) 안쪽으로 들어가면 '상위 탈출' 상태로 시각적 전환
+            e.preventDefault(); if (rowDragSourceId === targetId) return;
+            const targetRow = document.getElementById(`row-node-${targetId}`); if (!targetRow) return;
             if (e.clientX < 280) {
-                targetRow.classList.remove('drag-over-active');
-                targetRow.classList.add('drag-left-escape');
+                targetRow.classList.remove('drag-over-active'); targetRow.classList.add('drag-left-escape');
             } else {
-                targetRow.classList.remove('drag-left-escape');
-                targetRow.classList.add('drag-over-active');
+                targetRow.classList.remove('drag-left-escape'); targetRow.classList.add('drag-over-active');
             }
         }
 
         function onRowDragLeave(targetId) {
             const targetRow = document.getElementById(`row-node-${targetId}`);
-            if (targetRow) {
-                targetRow.classList.remove('drag-over-active');
-                targetRow.classList.remove('drag-left-escape');
-            }
+            if (targetRow) { targetRow.classList.remove('drag-over-active'); targetRow.classList.remove('drag-left-escape'); }
         }
 
         function onRowDrop(e, targetId) {
             e.preventDefault();
             const targetRow = document.getElementById(`row-node-${targetId}`);
-            if (targetRow) {
-                targetRow.classList.remove('drag-over-active');
-                targetRow.classList.remove('drag-left-escape');
-            }
-
+            if (targetRow) { targetRow.classList.remove('drag-over-active'); targetRow.classList.remove('drag-left-escape'); }
             if (!rowDragSourceId || rowDragSourceId === targetId) return;
 
             let sourceTask = state.tasks.find(t => t.id === rowDragSourceId);
@@ -415,24 +388,13 @@
             if (!sourceTask || !targetTask) return;
 
             let oldParentId = sourceTask.parentId;
-
-            // 순환참조 방지 가드 레일
-            let p = targetTask;
-            let cyclical = false;
-            while (p) {
-                if (p.id === rowDragSourceId) { cyclical = true; break; }
-                p = state.tasks.find(t => t.id === p.parentId);
-            }
+            let p = targetTask; let cyclical = false;
+            while (p) { if (p.id === rowDragSourceId) { cyclical = true; break; } p = state.tasks.find(t => t.id === p.parentId); }
 
             if (!cyclical) {
-                // 🛠️ 왼쪽으로 던졌으면 타겟 항목의 부모 레벨(즉 동레벨 부모)로 편입, 아니면 하위로 편입
-                if (e.clientX < 280) {
-                    sourceTask.parentId = targetTask.parentId; 
-                } else {
-                    sourceTask.parentId = targetId;
-                }
-                updateParentTimeChain(oldParentId);
-                updateParentTimeChain(sourceTask.parentId);
+                if (e.clientX < 280) { sourceTask.parentId = targetTask.parentId; } 
+                else { sourceTask.parentId = targetId; }
+                updateParentTimeChain(oldParentId); updateParentTimeChain(sourceTask.parentId);
                 saveData(); renderAll();
             }
             rowDragSourceId = null;
@@ -451,13 +413,11 @@
         function renderRows() {
             const container = document.getElementById('dynamic-rows-container'); container.innerHTML = '';
             let timeConfig = getActiveTimeRange();
-            let totalVisibleUnits = (state.viewMode === 'ALL') ? 52 : (timeConfig.end - timeConfig.start);
+            let totalVisibleUnits = timeConfig.end - timeConfig.start;
 
             let sortedTasks = [...state.tasks].sort((a, b) => a.start - b.start);
             let treeSorted = [];
-            function buildTree(pId) {
-                sortedTasks.filter(t => t.parentId === pId).forEach(t => { treeSorted.push(t); buildTree(t.id); });
-            }
+            function buildTree(pId) { sortedTasks.filter(t => t.parentId === pId).forEach(t => { treeSorted.push(t); buildTree(t.id); }); }
             buildTree(null);
 
             if (state.projectFocusId) {
@@ -465,9 +425,7 @@
                 let rootFocus = state.tasks.find(t => t.id === state.projectFocusId);
                 if (rootFocus) {
                     treeSorted.push(rootFocus);
-                    function buildSubTree(pId) {
-                        sortedTasks.filter(t => t.parentId === pId).forEach(t => { treeSorted.push(t); buildSubTree(t.id); });
-                    }
+                    function buildSubTree(pId) { sortedTasks.filter(t => t.parentId === pId).forEach(t => { treeSorted.push(t); buildSubTree(t.id); }); }
                     buildSubTree(state.projectFocusId);
                 }
             }
@@ -476,22 +434,21 @@
                 if (isAncestorCollapsed(task) || (state.projectFocusId && isFilteredByProjectFocus(task))) return;
 
                 let isParentNode = state.tasks.some(t => t.parentId === task.id);
+                let depth = getDepth(task);
+                task.color = getColorByDepth(depth); // 🛠️ 동레벨 색상 일치화 보정
+
                 const row = document.createElement('div');
                 row.className = `task-row ${task.checked ? 'completed-shading' : ''}`;
                 row.id = `row-node-${task.id}`;
-
                 row.ondragover = (e) => onRowDragOver(e, task.id);
                 row.ondragleave = () => onRowDragLeave(task.id);
                 row.ondrop = (e) => onRowDrop(e, task.id);
 
                 const left = document.createElement('div'); left.className = 'task-left-panel';
-
                 const grabHandle = document.createElement('div'); grabHandle.className = 'row-grab-handle';
-                grabHandle.innerText = "☰"; grabHandle.draggable = true;
-                grabHandle.ondragstart = (e) => onRowDragStart(e, task.id);
+                grabHandle.innerText = "☰"; grabHandle.draggable = true; grabHandle.ondragstart = (e) => onRowDragStart(e, task.id);
                 left.appendChild(grabHandle);
 
-                let depth = getDepth(task);
                 if (state.projectFocusId) {
                     let rootDepth = getDepth(state.tasks.find(t => t.id === state.projectFocusId));
                     depth = Math.max(0, depth - rootDepth);
@@ -556,50 +513,48 @@
                     rightTrack.appendChild(unit);
                 }
 
-                let barRenderable = false; let renderLeftCell = 0; let renderWidthCells = 0; let unitText = "";
-
-                if (state.viewMode === 'ALL') {
-                    let totalYearWeeks = 52; 
-                    let sWeek = Math.floor((task.start / 365) * totalYearWeeks);
-                    let eWeek = Math.ceil((task.end / 365) * totalYearWeeks);
-                    if (sWeek < totalYearWeeks && eWeek > 0) {
-                        barRenderable = true; renderLeftCell = Math.max(0, sWeek);
-                        renderWidthCells = Math.min(totalYearWeeks, eWeek) - renderLeftCell;
-                        unitText = `${Math.ceil((task.end - task.start)/7)}주간`;
-                    }
-                } else {
-                    let oStart = Math.max(timeConfig.start, task.start);
-                    let oEnd = Math.min(timeConfig.end, task.end);
-                    if (oStart < oEnd) {
-                        barRenderable = true; renderLeftCell = oStart - timeConfig.start;
-                        renderWidthCells = oEnd - oStart; unitText = `${task.end - task.start}일간`;
+                // 🛠️ [복원] 형제 레벨 간 휴식 및 정비 자동 생산 바 알고리즘
+                let siblings = state.tasks.filter(t => t.parentId === task.parentId).sort((a,b)=>a.start - b.start);
+                let currentIdx = siblings.findIndex(s => s.id === task.id);
+                if (currentIdx > 0) {
+                    let prevSibling = siblings[currentIdx - 1];
+                    if (prevSibling.end < task.start) {
+                        let rStart = Math.max(timeConfig.start, prevSibling.end);
+                        let rEnd = Math.min(timeConfig.end, task.start);
+                        if (rStart < rEnd) {
+                            const restBar = document.createElement('div');
+                            restBar.className = 'time-bar-element rest-auto-bar';
+                            restBar.style.left = `${(rStart - timeConfig.start) * state.cellWidth}px`;
+                            restBar.style.width = `${((rEnd - rStart) * state.cellWidth) - 12}px`;
+                            restBar.innerHTML = `<div class="bar-label" style="font-size:0.7rem; color:#94a3b8;">☕ 휴식 및 정비 (${rEnd - rStart}일간)</div>`;
+                            rightTrack.appendChild(restBar);
+                        }
                     }
                 }
 
-                if (barRenderable && renderWidthCells > 0) {
-                    const bar = document.createElement('div'); bar.className = 'time-bar-element';
-                    bar.style.backgroundColor = task.color || '#3b82f6';
+                // 메인 바 렌더링
+                let oStart = Math.max(timeConfig.start, task.start);
+                let oEnd = Math.min(timeConfig.end, task.end);
 
-                    bar.style.left = `${renderLeftCell * state.cellWidth}px`;
-                    bar.style.width = `${(renderWidthCells * state.cellWidth) - 12}px`;
+                if (oStart < oEnd) {
+                    const bar = document.createElement('div'); bar.className = 'time-bar-element';
+                    bar.style.backgroundColor = task.color;
+                    bar.style.left = `${(oStart - timeConfig.start) * state.cellWidth}px`;
+                    bar.style.width = `${((oEnd - oStart) * state.cellWidth) - 12}px`;
 
                     const hL = document.createElement('div'); hL.className = 'resizer';
                     const lbl = document.createElement('div'); lbl.className = 'bar-label';
-                    lbl.innerHTML = `<span>⏳ ${task.name} (${unitText})</span>`;
+                    lbl.innerHTML = `<span>⏳ ${task.name} (${task.end - task.start}일간)</span>`;
                     
                     let isMovingGuard = false;
-                    
-                    // 🛠️ 마우스 포인터 꼬임 현상 해결: 마우스 다운 시 윈도우 전역 이벤트를 캡처링 단계에서 인터셉트
                     lbl.onmousedown = (e) => {
                         if (e.buttons !== 1) return;
-                        e.stopPropagation();
-                        isMovingGuard = false;
+                        e.stopPropagation(); isMovingGuard = false;
                         startDrag(task.id, 'move', e.clientX);
                     };
-                    
                     lbl.onmousemove = () => { isMovingGuard = true; };
                     
-                    // 집중뷰 토글 전용 이벤트
+                    // 🛠️ 집중뷰 실행 대상 범위 개방 (모든 노드 허용)
                     lbl.onclick = (e) => {
                         e.stopPropagation();
                         if (!isMovingGuard) {
@@ -610,6 +565,7 @@
 
                     const hR = document.createElement('div'); hR.className = 'resizer';
 
+                    // 최상위 마스터를 제외한 모든 이동 및 길이조절 락/언락 적용
                     if (!isParentNode) {
                         bar.appendChild(hL); bar.appendChild(lbl); bar.appendChild(hR);
                         hL.onmousedown = (e) => { e.stopPropagation(); startDrag(task.id, 'left', e.clientX); };
@@ -626,7 +582,6 @@
         let currentDragId = null, dragType = null, dragStartX = 0, dragStartS = 0, dragStartE = 0;
         let originalTasksState = [];
 
-        // 🛠️ 마우스가 어디를 가든 무조건 창 전체에서 캐치하도록 하는 완벽 격리 리스너 엔진
         function startDrag(id, type, x) {
             currentDragId = id; dragType = type; dragStartX = x;
             let task = state.tasks.find(t => t.id === id);
@@ -635,27 +590,28 @@
             
             window.removeEventListener('mousemove', onDragMove, true);
             window.removeEventListener('mouseup', endDrag, true);
-            
-            // true 인자를 주어 캡처링 모드로 최우선 강제 집행
             window.addEventListener('mousemove', onDragMove, true);
             window.addEventListener('mouseup', endDrag, true);
         }
 
         function onDragMove(e) {
             if (!currentDragId) return;
-            e.stopPropagation(); // 하위 인디케이터가 이벤트를 훔치지 못하게 방어
+            e.stopPropagation();
             
             let deltaX = e.clientX - dragStartX;
+            // 🛠️ 집중뷰 및 타임라인 모드에 구애받지 않는 절대 1대1 스케일 오프셋 매핑
             let cellDelta = Math.round(deltaX / state.cellWidth);
-
-            if (state.viewMode === 'ALL') cellDelta = Math.round(cellDelta * (365 / 52));
 
             state.tasks = JSON.parse(JSON.stringify(originalTasksState));
             let task = state.tasks.find(t => t.id === currentDragId);
 
             if (dragType === 'move') {
                 let ns = dragStartS + cellDelta; let ne = dragStartE + cellDelta;
-                if (ns >= 0 && ne <= 365) { task.start = ns; task.end = ne; moveAllChildrenSet(task.id, cellDelta); }
+                // 🛠️ 맨 앞 부분 드롭 시 튕겨나가지 않게 강제 클리핑 보정
+                if (ns < 0) { ne = task.end - task.start; ns = 0; }
+                if (ne > 365) { ns = 365 - (task.end - task.start); ne = 365; }
+                task.start = ns; task.end = ne; 
+                moveAllChildrenSet(task.id, ns - dragStartS);
             } else if (dragType === 'left') {
                 let ns = dragStartS + cellDelta; if (ns >= 0 && ns < task.end) task.start = ns;
             } else if (dragType === 'right') {
@@ -665,8 +621,7 @@
         }
 
         function endDrag(e) {
-            if (e) e.stopPropagation();
-            currentDragId = null;
+            if (e) e.stopPropagation(); currentDragId = null;
             window.removeEventListener('mousemove', onDragMove, true);
             window.removeEventListener('mouseup', endDrag, true);
             saveData(); renderAll(); 
@@ -679,9 +634,8 @@
 
         function addChildRow(pId) {
             let p = state.tasks.find(t => t.id === pId);
-            let assignedColor = PALETTE[state.colorPointer % PALETTE.length]; state.colorPointer++;
             state.tasks.push({
-                id: "p_" + Date.now(), parentId: pId, name: "└ 세부 서브 태스크 라인", start: p.start, end: Math.min(p.end, p.start + 15), color: assignedColor, checked: false
+                id: "p_" + Date.now(), parentId: pId, name: "└ 세부 서브 태스크 라인", start: p.start, end: Math.min(p.end, p.start + 15), color: p.color, checked: false
             });
             state.collapsedNodes[pId] = false; updateParentTimeChain(pId); saveData(); renderAll();
         }
