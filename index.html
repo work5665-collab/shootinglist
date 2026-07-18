@@ -63,23 +63,29 @@
         
         .main-time-cell {
             border-right: 2px solid var(--border-color); display: flex; flex-direction: column; align-items: center; justify-content: center;
-            font-size: 0.85rem; font-weight: bold; color: var(--text-color); background: #111827; height: 42px;
+            font-size: 0.85rem; font-weight: bold; color: var(--text-color); background: #111827; height: 42px; cursor: pointer;
         }
+        .main-time-cell:hover { background: #1e293b; }
         
         .sub-tick-row { display: flex; background: #0b0f19; height: 24px; border-bottom: 1px solid var(--border-color); }
         .sub-tick-cell {
             border-right: 1px dashed rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center;
-            font-size: 0.65rem; color: var(--text-muted); font-family: monospace;
+            font-size: 0.65rem; color: var(--text-muted); font-family: monospace; cursor: pointer;
         }
+        .sub-tick-cell:hover { background: #1e293b; color: white; }
 
-        /* 항목 레벨 디자인 */
+        /* 항목 레벨 디자인 및 트리 뎁스 들여쓰기 */
         .task-row { display: flex; border-bottom: 1px solid var(--border-color); background: var(--card-bg); position: relative; }
         .task-row.completed-shading { opacity: 0.4; background: #0f172a; } 
+        .task-row.hidden-node { display: none; } /* 아코디언 접기 기능 */
         
         .task-left-panel {
             width: 380px; min-width: 380px; padding: 6px 12px; border-right: 2px solid var(--border-color);
             display: flex; align-items: center; gap: 8px; background: #1e293b; position: sticky; left: 0; z-index: 15;
         }
+
+        .indent-space { display: inline-block; width: 16px; }
+        .toggle-arrow { cursor: pointer; color: #f59e0b; font-weight: bold; padding: 0 4px; }
 
         .task-checkbox { width: 18px; height: 18px; cursor: pointer; z-index: 5; }
         
@@ -100,17 +106,17 @@
             position: absolute; height: 34px; top: 9px;
             border-radius: 6px; display: flex; justify-content: space-between; align-items: center;
             box-shadow: 0 4px 6px rgba(0,0,0,0.3); cursor: pointer;
+            z-index: 5;
         }
-        .bar-label { flex: 1; text-align: center; font-size: 0.75rem; font-weight: 700; color: white; overflow: hidden; white-space: nowrap; text-overflow: min-content; padding: 0 2px; height: 100%; display: flex; align-items: center; justify-content: center; }
-        .resizer { width: 6px; height: 100%; background: rgba(255, 255, 255, 0.25); cursor: ew-resize; }
+        .bar-label { flex: 1; text-align: center; font-size: 0.75rem; font-weight: 700; color: white; overflow: hidden; white-space: nowrap; text-overflow: clip; padding: 0 2px; height: 100%; display: flex; align-items: center; justify-content: center; }
+        .resizer { width: 8px; height: 100%; background: rgba(255, 255, 255, 0.3); cursor: ew-resize; z-index: 10; }
 
-        /* 자동 휴식 정비 바 */
         .time-bar-element.break-auto-bar {
             background: repeating-linear-gradient(45deg, #0d9488, #0d9488 10px, #115e59 10px, #115e59 20px) !important;
-            cursor: not-allowed; opacity: 0.5;
+            cursor: not-allowed; opacity: 0.4; z-index: 1;
         }
 
-        /* 완료 보관소 및 피드백 입력 폼 디자인 */
+        /* 완료 보관소 */
         .archive-section { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 15px; margin-top: 10px; }
         .archive-header { display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
         .archive-content { display: none; margin-top: 15px; border-top: 1px solid var(--border-color); padding-top: 10px; }
@@ -133,7 +139,7 @@
         <div class="navigation-trail" id="nav-trail-container"></div>
 
         <div class="control-panel">
-            <button onclick="addNewRow()">➕ 항목 추가</button>
+            <button onclick="addNewRow()">➕ 최상위 항목 추가</button>
             <button class="secondary" onclick="adjustZoom(-10)">➖ 축소</button>
             <button class="secondary" onclick="adjustZoom(10)">➕ 확대</button>
             <button class="danger" onclick="resetAllData()">🔄 초기화</button>
@@ -149,118 +155,89 @@
         </div>
     </div>
 
-    <!-- 평가 시스템이 탑재된 아카이빙 대시보드 -->
     <div class="archive-section">
         <div class="archive-header" onclick="toggleArchiveView()">
             <h3>📦 완료된 항목 및 프로덕션 피드백 분석기</h3>
-            <div style="background:#334155; padding:4px 10px; border-radius:6px; font-size:0.8rem; color:#f59e0b; font-weight:bold;" id="archive-count-badge">0개 완료</div>
+            <div style="background:#334155; padding:4px 10px; border-radius:6px; font-size:0.8rem; color:#f59e0b; font-weight:bold;" id="archive-count-badge">0개 완료됨</div>
         </div>
         <div class="archive-content" id="archive-content-panel"></div>
     </div>
 
     <script>
+        // 2026년 마스터 전역 고해상도 셀 매핑 상태
         let state = {
             year: 2026,
-            currentParentId: null, 
-            viewScale: 'year', 
-            selectedMonth: 0,  
-            selectedWeek: 0,
-            selectedDay: 1,
-            selectedHour: 0,
-            cellWidth: 90,
+            viewFilter: 'all', // all, month, week
+            filterMonthIdx: 0,
+            filterWeekIdx: 0,
+            cellWidth: 65,
             titleBackup: "",
             inputBackups: {},
+            collapsedNodes: {}, // 아코디언 접힘 상태 추적 추적기
             tasks: [
-                { id: "t-1", parentId: null, name: "수박 판매 프로덕션 빌드업", start: 0, end: 3, color: "#3b82f6", checked: false, repeatCount: 1, reviewScore: "⭐⭐⭐⭐⭐", issueText: "순조로움" },
-                { id: "t-2", parentId: "t-1", name: "시장 트렌드 분석 및 자료조사", start: 0, end: 2, color: "#a855f7", checked: false, repeatCount: 1, reviewScore: "⭐⭐⭐⭐⭐", issueText: "" },
-                { id: "t-3", parentId: "t-2", name: "온라인 유통 채널 현황 조사", start: 0, end: 2, color: "#eab308", checked: false, repeatCount: 1, reviewScore: "⭐⭐⭐⭐⭐", issueText: "" }
+                { id: "t-1", parentId: null, name: "수박 판매 프로덕션 빌드업", start: 0, end: 15, color: "#3b82f6", checked: false, repeatCount: 1, reviewScore: "⭐⭐⭐⭐⭐", issueText: "" },
+                { id: "t-2", parentId: "t-1", name: "시장 트렌드 분석 및 자료조사", start: 0, end: 8, color: "#a855f7", checked: false, repeatCount: 1, reviewScore: "⭐⭐⭐⭐⭐", issueText: "" },
+                { id: "t-3", parentId: "t-2", name: "온라인 유통 채널 현황 조사", start: 2, end: 7, color: "#eab308", checked: false, repeatCount: 1, reviewScore: "⭐⭐⭐⭐⭐", issueText: "" }
             ]
         };
 
         const PALETTE = ["#3b82f6", "#a855f7", "#eab308", "#10b981", "#ef4444"];
-        const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
+        
+        // 2026년 실제 달력 데이터베이스 팩토리 고정 변환
+        const MONTH_WEEKS = [5, 4, 4, 5, 4, 5, 4, 5, 4, 4, 5, 5]; // 2026년 각 월별 실제 주차 개수
+        const TOTAL_GRID_WEEKS = MONTH_WEEKS.reduce((a, b) => a + b, 0); // 총 54개 주차 세부 가이드 라인
 
         function init() {
-            const saved = localStorage.getItem('onset_linked_timeline_v7');
+            const saved = localStorage.getItem('onset_tree_timeline_v8');
             if (saved) state = JSON.parse(saved);
-            
             setupTitleInput();
             renderTrail();
             renderAll();
         }
 
         function saveData() {
-            localStorage.setItem('onset_linked_timeline_v7', JSON.stringify(state));
+            localStorage.setItem('onset_tree_timeline_v8', JSON.stringify(state));
             renderArchive();
         }
 
-        // ESC 리버트 및 엔터 완료 시스템 (타이틀 가드)
         function setupTitleInput() {
             const titleInput = document.getElementById('main-title');
             titleInput.onfocus = () => { state.titleBackup = titleInput.value; };
-            titleInput.onblur = () => { titleInput.value = state.titleBackup; }; // 저장되지 않으면 롤백
+            titleInput.onblur = () => { titleInput.value = state.titleBackup; }; 
             titleInput.onkeydown = (e) => {
-                if (e.key === 'Enter') {
-                    state.titleBackup = titleInput.value;
-                    titleInput.blur();
-                    saveData();
-                } else if (e.key === 'Escape') {
-                    titleInput.value = state.titleBackup;
-                    titleInput.blur();
-                }
+                if (e.key === 'Enter') { state.titleBackup = titleInput.value; titleInput.blur(); saveData(); }
+                else if (e.key === 'Escape') { titleInput.value = state.titleBackup; titleInput.blur(); }
             };
         }
 
         function renderTrail() {
             const container = document.getElementById('nav-trail-container');
             container.innerHTML = '';
-            let html = `<span class="trail-link" onclick="jumpToScale('year')">🏠 ${state.year}년 마스터</span>`;
-            
-            if (state.viewScale !== 'year') html += ` <span>&gt;</span> <span class="trail-link" onclick="jumpToScale('month', ${state.selectedMonth})">${state.selectedMonth + 1}월</span>`;
-            if (['week', 'day', 'hour'].includes(state.viewScale)) html += ` <span>&gt;</span> <span class="trail-link" onclick="jumpToScale('week', ${state.selectedMonth}, ${state.selectedWeek})">${state.selectedWeek + 1}주차</span>`;
-            if (['day', 'hour'].includes(state.viewScale)) html += ` <span>&gt;</span> <span class="trail-link" onclick="jumpToScale('day', ${state.selectedMonth}, ${state.selectedWeek}, ${state.selectedDay})">${state.selectedDay}일</span>`;
-            if (state.viewScale === 'hour') html += ` <span>&gt;</span> <span class="trail-link">${state.selectedHour}시</span>`;
-            
+            let html = `<span class="trail-link" onclick="setFilter('all')">🏠 2026년 전체보기</span>`;
+            if (state.viewFilter === 'month') {
+                html += ` <span>&gt;</span> <span class="trail-link">${state.filterMonthIdx + 1}월 집중 뷰</span>`;
+            }
             container.innerHTML = html;
         }
 
-        function jumpToScale(scale, m=0, w=0, d=1, h=0) {
-            state.viewScale = scale;
-            state.selectedMonth = m; state.selectedWeek = w; state.selectedDay = d; state.selectedHour = h;
-            
-            // 상위로 점프 시 해당 깊이 레벨의 상위 ID 설정 복원
-            if(scale === 'year') state.currentParentId = null;
+        function setFilter(type, mIdx = 0) {
+            state.viewFilter = type;
+            state.filterMonthIdx = mIdx;
             renderTrail(); renderAll();
         }
 
-        function getDaysInMonth(year, month) { return new Date(year, month + 1, 0).getDate(); }
-        
-        function getWeeksInMonth(year, month) {
-            const firstDay = new Date(year, month, 1).getDay();
-            const totalDays = getDaysInMonth(year, month);
-            return Math.ceil((totalDays + firstDay) / 7);
+        // 특정 범위 셀만 슬라이싱 계산하는 기어
+        function getActiveCellRange() {
+            if (state.viewFilter === 'all') {
+                return { start: 0, end: TOTAL_GRID_WEEKS };
+            } else {
+                let start = 0;
+                for(let i=0; i<state.filterMonthIdx; i++) start += MONTH_WEEKS[i];
+                return { start: start, end: start + MONTH_WEEKS[state.filterMonthIdx] };
+            }
         }
 
-        function getMaxCells() {
-            if (state.viewScale === 'year') return 12; 
-            if (state.viewScale === 'month') return getWeeksInMonth(state.year, state.selectedMonth); 
-            if (state.viewScale === 'week') return 7; 
-            if (state.viewScale === 'day') return 24; 
-            if (state.viewScale === 'hour') return 12; // 5분 단위 (총 12칸 = 60분)
-            return 12;
-        }
-
-        function getDurationLabel(start, end) {
-            let diff = end - start;
-            if (state.viewScale === 'year') return `${diff}개월`;
-            if (state.viewScale === 'month') return `${diff}주`;
-            if (state.viewScale === 'week') return `${diff}일`;
-            if (state.viewScale === 'day') return `${diff}시간`;
-            if (state.viewScale === 'hour') return `${diff * 5}분`;
-            return `${diff}칸`;
-        }
-
-        // 헤더 프레임 클릭 이동 제거 (순수 타임라인 렌더링 기능만 박제)
+        // 📅 두 번째 줄에 .. 대신 주차가 완벽히 채워지는 헤더 렌더러
         function renderHeader() {
             const wrapper = document.getElementById('master-render-header');
             wrapper.innerHTML = '';
@@ -275,34 +252,51 @@
             const g1 = document.createElement('div'); g1.className = 'header-grid-zone';
             const g2 = document.createElement('div'); g2.className = 'header-grid-zone';
 
-            let cells = getMaxCells();
+            let range = getActiveCellRange();
 
-            for (let i = 0; i < cells; i++) {
-                const cell = document.createElement('div'); cell.className = 'main-time-cell'; cell.style.width = `${state.cellWidth}px`;
-                const subTick = document.createElement('div'); subTick.className = 'sub-tick-cell'; subTick.style.width = `${state.cellWidth}px`;
-                subTick.innerText = "••";
+            if (state.viewFilter === 'all') {
+                let currentGlobalWeek = 0;
+                MONTH_WEEKS.forEach((weeksCount, mIdx) => {
+                    // 첫 번째 줄: 월 표시 (클릭시 해당 월로 정밀 필터 확장)
+                    const cell = document.createElement('div');
+                    cell.className = 'main-time-cell';
+                    cell.style.width = `${state.cellWidth * weeksCount}px`;
+                    cell.innerText = `${mIdx + 1}월`;
+                    cell.onclick = () => setFilter('month', mIdx);
+                    g1.appendChild(cell);
 
-                if (state.viewScale === 'year') cell.innerText = `${i+1}월`;
-                else if (state.viewScale === 'month') cell.innerText = `${i+1}주차`;
-                else if (state.viewScale === 'week') {
-                    let startOffset = new Date(state.year, state.selectedMonth, 1).getDay();
-                    let targetDay = (state.selectedWeek * 7) + i + 1 - startOffset;
-                    let maxDays = getDaysInMonth(state.year, state.selectedMonth);
-                    if (targetDay > 0 && targetDay <= maxDays) {
-                        let dayObj = new Date(state.year, state.selectedMonth, targetDay);
-                        cell.innerText = `${targetDay}일(${WEEKDAYS[dayObj.getDay()]})`;
-                    } else { cell.innerText = "-"; cell.style.opacity = "0.3"; }
-                } 
-                else if (state.viewScale === 'day') cell.innerText = `${i}시`;
-                else if (state.viewScale === 'hour') { cell.innerText = `${i * 5}분`; subTick.innerText = "5m"; }
+                    // 두 번째 줄: 이제 .. 이 아니라 실제 주차가 완벽하게 보임!
+                    for (let w = 0; w < weeksCount; w++) {
+                        const subTick = document.createElement('div');
+                        subTick.className = 'sub-tick-cell';
+                        subTick.style.width = `${state.cellWidth}px`;
+                        subTick.innerText = `${w + 1}주`;
+                        g2.appendChild(subTick);
+                    }
+                });
+            } else {
+                // 특정 월 집중 보기 모드
+                const cell = document.createElement('div');
+                cell.className = 'main-time-cell';
+                cell.style.width = `${state.cellWidth * MONTH_WEEKS[state.filterMonthIdx]}px`;
+                cell.innerText = `${state.filterMonthIdx + 1}월 집중 뷰 (클릭 시 전체 복귀)`;
+                cell.onclick = () => setFilter('all');
+                g1.appendChild(cell);
 
-                g1.appendChild(cell); g2.appendChild(subTick);
+                for (let w = 0; w < MONTH_WEEKS[state.filterMonthIdx]; w++) {
+                    const subTick = document.createElement('div');
+                    subTick.className = 'sub-tick-cell';
+                    subTick.style.width = `${state.cellWidth}px`;
+                    subTick.innerText = `${w + 1}주차`;
+                    g2.appendChild(subTick);
+                }
             }
+
             row1.appendChild(g1); row2.appendChild(g2);
             wrapper.appendChild(row1); wrapper.appendChild(row2);
         }
 
-        // 🔗 상하위 목록 타임라인 길이 동적 상호 연동 연산 알고리즘 기어
+        // 🔗 하위 목록의 총합 연동 규칙 제어 엔진
         function synchronizeHierarchyChain(childTaskId) {
             let child = state.tasks.find(t => t.id === childTaskId);
             if (!child || !child.parentId) return;
@@ -310,33 +304,79 @@
             let parent = state.tasks.find(t => t.id === child.parentId);
             if (!parent) return;
 
-            // 동일한 부모를 가진 모든 하위 자식 스케줄 수집
             let siblings = state.tasks.filter(t => t.parentId === parent.id);
             if (siblings.length === 0) return;
 
             let minStart = Math.min(...siblings.map(s => s.start));
             let maxEnd = Math.max(...siblings.map(s => s.end));
 
-            // 가드 규칙: 상위는 하위의 전체 합보다 줄어들 수 없으나, 개별적으로 더 늘리는 것은 허용함
+            // 하위 합보다 상위가 좁아질 수 없도록 차단하고 자동 동적 확장 연동
             if (parent.start > minStart) parent.start = minStart;
             if (parent.end < maxEnd) parent.end = maxEnd;
 
-            // 최상위 루트 노드까지 재귀적으로 상향 전파 연동
             synchronizeHierarchyChain(parent.id);
+        }
+
+        // 트리 계층 뎁스 계산기
+        function getDepth(task) {
+            let depth = 0; let p = state.tasks.find(t => t.id === task.parentId);
+            while(p) { depth++; p = state.tasks.find(t => t.id === p.parentId); }
+            return depth;
+        }
+
+        // 조상 노드가 접혀있는지 확인 여부
+        function isAncestorCollapsed(task) {
+            let p = state.tasks.find(t => t.id === task.parentId);
+            while(p) {
+                if (state.collapsedNodes[p.id]) return true;
+                p = state.tasks.find(t => t.id === p.parentId);
+            }
+            return false;
         }
 
         function renderRows() {
             const container = document.getElementById('dynamic-rows-container');
             container.innerHTML = '';
 
-            let currentLevelTasks = state.tasks.filter(t => t.parentId === state.currentParentId);
-            let totalCells = getMaxCells();
+            let range = getActiveCellRange();
+            let displayCount = range.end - range.start;
 
-            currentLevelTasks.forEach(task => {
-                const row = document.createElement('div'); 
-                row.className = `task-row ${task.checked ? 'completed-shading' : ''}`; 
+            // 계층 정렬 알고리즘 트리 배치
+            let sortedTasks = [];
+            function buildTree(pId) {
+                state.tasks.filter(t => t.parentId === pId).forEach(t => {
+                    sortedTasks.push(t); buildTree(t.id);
+                });
+            }
+            buildTree(null);
+
+            sortedTasks.forEach(task => {
+                const row = document.createElement('div');
+                row.className = `task-row ${task.checked ? 'completed-shading' : ''}`;
+                if (isAncestorCollapsed(task)) row.classList.add('hidden-node');
 
                 const left = document.createElement('div'); left.className = 'task-left-panel';
+
+                // 트리 계층 화살표 및 들여쓰기
+                let depth = getDepth(task);
+                for(let d=0; d<depth; d++) {
+                    let space = document.createElement('span'); space.className = 'indent-space';
+                    left.appendChild(space);
+                }
+
+                let children = state.tasks.filter(t => t.parentId === task.id);
+                if (children.length > 0) {
+                    const arrow = document.createElement('span'); arrow.className = 'toggle-arrow';
+                    arrow.innerText = state.collapsedNodes[task.id] ? "▶" : "▼";
+                    arrow.onclick = (e) => {
+                        e.stopPropagation();
+                        state.collapsedNodes[task.id] = !state.collapsedNodes[task.id];
+                        saveData(); renderRows();
+                    };
+                    left.appendChild(arrow);
+                } else {
+                    let space = document.createElement('span'); space.className = 'indent-space'; left.appendChild(space);
+                }
 
                 const cb = document.createElement('input'); cb.type = 'checkbox'; cb.className = 'task-checkbox';
                 cb.checked = task.checked;
@@ -351,84 +391,78 @@
                 });
                 left.appendChild(pal);
 
-                // ESC 롤백 & Blur 리버트 가드가 장착된 텍스트 편집 인풋 필드
+                // ESC 완벽 복귀 튜닝 인풋 박스
                 const nameInput = document.createElement('input'); nameInput.className = 'task-name-input';
                 nameInput.value = task.name;
-                
                 nameInput.onfocus = () => { state.inputBackups[task.id] = nameInput.value; };
-                nameInput.onblur = () => { nameInput.value = state.inputBackups[task.id]; }; 
+                nameInput.onblur = () => { nameInput.value = state.inputBackups[task.id]; };
                 nameInput.onkeydown = (e) => {
                     if (e.key === 'Enter') {
-                        state.inputBackups[task.id] = nameInput.value; 
-                        task.name = nameInput.value;
-                        nameInput.blur(); saveData(); renderRows();
+                        state.inputBackups[task.id] = nameInput.value;
+                        task.name = nameInput.value; nameInput.blur(); saveData(); renderRows();
                     } else if (e.key === 'Escape') {
-                        nameInput.value = state.inputBackups[task.id];
-                        nameInput.blur();
+                        nameInput.value = state.inputBackups[task.id]; nameInput.blur();
                     }
                 };
                 left.appendChild(nameInput);
 
-                const delBtn = document.createElement('button'); delBtn.className = 'danger'; delBtn.style.padding = '3px 7px'; delBtn.innerText = "✕";
+                // 하위 항목 직계 생성 바로가기 단축 버튼 추가
+                const subAddBtn = document.createElement('button'); subAddBtn.style.padding = '3px 6px'; subAddBtn.style.fontSize = '0.7rem'; subAddBtn.innerText = "➕";
+                subAddBtn.onclick = () => { addChildRow(task.id); };
+                left.appendChild(subAddBtn);
+
+                const delBtn = document.createElement('button'); delBtn.className = 'danger'; delBtn.style.padding = '3px 6px'; delBtn.innerText = "✕";
                 delBtn.onclick = () => { state.tasks = state.tasks.filter(t => t.id !== task.id); saveData(); renderAll(); };
                 left.appendChild(delBtn);
 
                 row.appendChild(left);
 
+                // 우측 그리드 트랙 영역 계산
                 const rightTrack = document.createElement('div'); rightTrack.className = 'task-right-track';
-                rightTrack.style.width = `${totalCells * state.cellWidth}px`;
+                rightTrack.style.width = `${displayCount * state.cellWidth}px`;
 
-                for (let i = 0; i < totalCells; i++) {
+                for (let i = 0; i < displayCount; i++) {
                     const unit = document.createElement('div'); unit.className = 'track-grid-unit'; unit.style.width = `${state.cellWidth}px`;
                     rightTrack.appendChild(unit);
                 }
 
-                // 자동 휴식 왼쪽 영역 채우기
-                if (task.start > 0) {
-                    const breakBar = document.createElement('div'); breakBar.className = 'time-bar-element break-auto-bar';
-                    breakBar.style.left = `0px`; breakBar.style.width = `${task.start * state.cellWidth}px`;
-                    breakBar.innerHTML = `<div class="bar-label">[${getDurationLabel(0, task.start)}]</div>`;
-                    rightTrack.appendChild(breakBar);
-                }
+                // 글로벌 절대 좌표를 현재 필터 상대 좌표로 투영 보정 계산
+                let relativeStart = task.start - range.start;
+                let relativeEnd = task.end - range.start;
 
-                // 메인 소요시간 우선 인디케이터 바 디자인
-                const bar = document.createElement('div'); bar.className = 'time-bar-element';
-                bar.style.backgroundColor = task.color || '#3b82f6';
-                bar.style.left = `${task.start * state.cellWidth}px`;
-                bar.style.width = `${(task.end - task.start) * state.cellWidth}px`;
+                // 인디케이터 렌더링 검사 범위 가드
+                if (!(relativeEnd <= 0 || relativeStart >= displayCount)) {
+                    let drawStart = Math.max(0, relativeStart);
+                    let drawEnd = Math.min(displayCount, relativeEnd);
 
-                const hL = document.createElement('div'); hL.className = 'resizer';
-                
-                // 🛑 복잡한 진행텍스트 완전 제거 -> 소요 시간만 고대비 강조 컴팩트 노출 디자인
-                const lbl = document.createElement('div'); lbl.className = 'bar-label';
-                lbl.innerHTML = `<span style="font-size:0.8rem; letter-spacing:-0.5px;">⏳ ${getDurationLabel(task.start, task.end)}</span>`;
-                
-                // 인디케이터 바 본체 클릭시 즉시 하위 기획 뎁스 레벨 스케일 자동 이동 연동
-                lbl.onclick = (e) => {
-                    e.stopPropagation();
-                    state.currentParentId = task.id;
-                    if (state.viewScale === 'year') jumpToScale('month', task.start);
-                    else if (state.viewScale === 'month') jumpToScale('week', state.selectedMonth, task.start);
-                    else if (state.viewScale === 'week') jumpToScale('day', state.selectedMonth, state.selectedWeek, task.start + 1);
-                    else if (state.viewScale === 'day') jumpToScale('hour', state.selectedMonth, state.selectedWeek, state.selectedDay, task.start);
-                };
+                    const bar = document.createElement('div'); bar.className = 'time-bar-element';
+                    bar.style.backgroundColor = task.color || '#3b82f6';
+                    bar.style.left = `${drawStart * state.cellWidth}px`;
+                    bar.style.width = `${(drawEnd - drawStart) * state.cellWidth}px`;
 
-                const hR = document.createElement('div'); hR.className = 'resizer';
+                    const hL = document.createElement('div'); hL.className = 'resizer';
+                    
+                    // 🛑 이제 인디케이터 누르면 페이지 이동 대신 아코디언 토글이 시원하게 작동!
+                    const lbl = document.createElement('div'); lbl.className = 'bar-label';
+                    lbl.innerHTML = `<span>⏳ ${task.end - task.start}주간</span>`;
+                    lbl.onclick = (e) => {
+                        e.stopPropagation();
+                        if (children.length > 0) {
+                            state.collapsedNodes[task.id] = !state.collapsedNodes[task.id];
+                            saveData(); renderRows();
+                        }
+                    };
 
-                bar.appendChild(hL); bar.appendChild(lbl); bar.appendChild(hR);
+                    const hR = document.createElement('div'); hR.className = 'resizer';
 
-                hL.onmousedown = (e) => { e.stopPropagation(); startDrag(task.id, 'left', e.clientX); };
-                hR.onmousedown = (e) => { e.stopPropagation(); startDrag(task.id, 'right', e.clientX); };
-                lbl.onmousedown = (e) => { e.stopPropagation(); if (e.buttons === 1 && e.movementX !== 0) startDrag(task.id, 'move', e.clientX); };
+                    bar.appendChild(hL); bar.appendChild(lbl); bar.appendChild(hR);
 
-                rightTrack.appendChild(bar);
+                    // 드래그 제어 정밀 인터페이스 바인딩
+                    hL.onmousedown = (e) => { e.stopPropagation(); startDrag(task.id, 'left', e.clientX); };
+                    hR.onmousedown = (e) => { e.stopPropagation(); startDrag(task.id, 'right', e.clientX); };
+                    lbl.onmousedown = (e) => { e.stopPropagation(); if (e.buttons === 1 && e.movementX !== 0) startDrag(task.id, 'move', e.clientX); };
 
-                // 자동 휴식 오른쪽 영역 채우기
-                if (task.end < totalCells) {
-                    const breakBarEnd = document.createElement('div'); breakBarEnd.className = 'time-bar-element break-auto-bar';
-                    breakBarEnd.style.left = `${task.end * state.cellWidth}px`; breakBarEnd.style.width = `${(totalCells - task.end) * state.cellWidth}px`;
-                    breakBarEnd.innerHTML = `<div class="bar-label">[${getDurationLabel(task.end, totalCells)}]</div>`;
-                    rightTrack.appendChild(breakBarEnd);
+                    rightTrack.appendChild(bar);
                 }
 
                 row.appendChild(rightTrack);
@@ -436,11 +470,13 @@
             });
         }
 
+        // 드래그 마우스 무브 실시간 수치 보정 시스템
+        let currentDragBarId = null, dragType = null, dragStartX = 0, dragStartLeft = 0, dragStartEnd = 0;
+
         function startDrag(id, type, x) {
             currentDragBarId = id; dragType = type; dragStartX = x;
             let task = state.tasks.find(t => t.id === id);
             dragStartLeft = task.start; dragStartEnd = task.end;
-
             document.addEventListener('mousemove', onDragMove);
             document.addEventListener('mouseup', endDrag);
         }
@@ -448,15 +484,12 @@
         function onDragMove(e) {
             if (!currentDragBarId) return;
             let task = state.tasks.find(t => t.id === currentDragBarId);
-            let totalCells = getMaxCells();
-
             let deltaX = e.clientX - dragStartX;
             let cellDelta = Math.round(deltaX / state.cellWidth);
 
-            // 하위 자식 목록의 최소/최대 한계 범위 제한 계산
             let siblings = state.tasks.filter(t => t.parentId === task.id);
-            let minAllowedStart = 0;
-            let maxAllowedEnd = totalCells;
+            let minAllowedStart = TOTAL_GRID_WEEKS;
+            let maxAllowedEnd = 0;
 
             if (siblings.length > 0) {
                 minAllowedStart = Math.min(...siblings.map(s => s.start));
@@ -466,18 +499,17 @@
             if (dragType === 'move') {
                 let ns = dragStartLeft + cellDelta;
                 let ne = dragStartEnd + cellDelta;
-                if (ns >= 0 && ne <= totalCells && ns <= minAllowedStart && ne >= maxAllowedEnd) { 
-                    task.start = ns; task.end = ne; 
+                if (ns >= 0 && ne <= TOTAL_GRID_WEEKS && (siblings.length === 0 || (ns <= minAllowedStart && ne >= maxAllowedEnd))) {
+                    task.start = ns; task.end = ne;
                 }
             } else if (dragType === 'left') {
                 let ns = dragStartLeft + cellDelta;
-                if (ns >= 0 && ns < task.end && ns <= minAllowedStart) task.start = ns;
+                if (ns >= 0 && ns < task.end && (siblings.length === 0 || ns <= minAllowedStart)) task.start = ns;
             } else if (dragType === 'right') {
                 let ne = dragStartEnd + cellDelta;
-                if (ne > task.start && ne <= totalCells && ne >= maxAllowedEnd) task.end = ne;
+                if (ne > task.start && ne <= TOTAL_GRID_WEEKS && (siblings.length === 0 || ne >= maxAllowedEnd)) task.end = ne;
             }
             
-            // 상하위 체인 묶음 동기화 전동기 작동
             synchronizeHierarchyChain(task.id);
             renderRows();
         }
@@ -492,10 +524,10 @@
         function addNewRow() {
             state.tasks.push({
                 id: "t_" + Date.now(),
-                parentId: state.currentParentId,
-                name: "새 촬영 세부 작업 플랜 항목 명칭 기입",
+                parentId: null,
+                name: "새 마스터 최상위 프로젝트 대장정",
                 start: 0,
-                end: 2,
+                end: 5,
                 color: "#3b82f6",
                 checked: false,
                 repeatCount: 1,
@@ -505,43 +537,55 @@
             saveData(); renderRows();
         }
 
-        // 📦 고도화된 아카이빙 복합 평가 분석 리포트 보관함 시스템
+        function addChildRow(pId) {
+            let pTask = state.tasks.find(t => t.id === pId);
+            state.tasks.push({
+                id: "t_" + Date.now(),
+                parentId: pId,
+                name: "└ 하위 세부 가이드 연동 태스크",
+                start: pTask.start,
+                end: Math.min(pTask.end, pTask.start + 2),
+                color: "#a855f7",
+                checked: false,
+                repeatCount: 1,
+                reviewScore: "⭐⭐⭐⭐⭐",
+                issueText: ""
+            });
+            state.collapsedNodes[pId] = false; // 강제 확장 해제
+            saveData(); renderAll();
+        }
+
         function renderArchive() {
             const container = document.getElementById('archive-content-panel');
             const badge = document.getElementById('archive-count-badge');
-            
             let completed = state.tasks.filter(t => t.checked);
             badge.innerText = `${completed.length}개 완료됨`;
 
             if (completed.length === 0) {
-                container.innerHTML = `<div style="text-align:center; color:var(--text-muted); padding:10px;">현재 완료 보관함에 데이터가 없습니다.</div>`;
+                container.innerHTML = `<div style="text-align:center; color:var(--text-muted); padding:10px;">완료 보관함이 비어있습니다.</div>`;
                 return;
             }
 
             let html = '';
             completed.forEach(task => {
-                // 각 항목별 개별 반복 횟수, 별점 평가, 애로사항 회고 폼 렌더링
                 html += `
                     <div class="archived-item">
                         <div class="archive-top">
-                            <span>🟩 <strong>${task.name}</strong> <span style="color:var(--text-muted); font-size:0.75rem;">(소요 기간: ${getDurationLabel(task.start, task.end)})</span></span>
-                            <button class="secondary" style="padding:4px 8px; font-size:0.75rem;" onclick="restoreTask('${task.id}')">🔄 타임라인 복원</button>
+                            <span>🟩 <strong>${task.name}</strong> <span style="color:var(--text-muted); font-size:0.75rem;">(총 기간: ${task.end - task.start}주간)</span></span>
+                            <button class="secondary" style="padding:4px 8px; font-size:0.75rem;" onclick="restoreTask('${task.id}')">🔄 복원</button>
                         </div>
                         <div class="feedback-form">
                             <label style="font-size:0.75rem; color:var(--text-muted);">반복 횟수:</label>
                             <input type="number" class="feedback-input" style="width:50px;" value="${task.repeatCount || 1}" min="1" onchange="updateFeedback('${task.id}', 'repeatCount', this.value)">
-                            
-                            <label style="font-size:0.75rem; color:var(--text-muted); margin-left:10px;">만족도 평가:</label>
+                            <label style="font-size:0.75rem; color:var(--text-muted); margin-left:10px;">평가:</label>
                             <select class="feedback-select" onchange="updateFeedback('${task.id}', 'reviewScore', this.value)">
                                 <option value="⭐⭐⭐⭐⭐" ${task.reviewScore === '⭐⭐⭐⭐⭐' ? 'selected' : ''}>⭐⭐⭐⭐⭐ 만족</option>
                                 <option value="⭐⭐⭐⭐" ${task.reviewScore === '⭐⭐⭐⭐' ? 'selected' : ''}>⭐⭐⭐⭐ 우수</option>
                                 <option value="⭐⭐⭐" ${task.reviewScore === '⭐⭐⭐' ? 'selected' : ''}>⭐⭐⭐ 보통</option>
-                                <option value="⭐⭐" ${task.reviewScore === '⭐⭐' ? 'selected' : ''}>⭐⭐ 애로사항 있음</option>
-                                <option value="⭐" ${task.reviewScore === '⭐' ? 'selected' : ''}>⭐ 수정 필요</option>
+                                <option value="⭐⭐" ${task.reviewScore === '⭐⭐' ? 'selected' : ''}>⭐⭐ 애로</option>
+                                <option value="⭐" ${task.reviewScore === '⭐' ? 'selected' : ''}>⭐ 수정</option>
                             </select>
-
-                            <label style="font-size:0.75rem; color:var(--text-muted); margin-left:10px;">현장 애로사항 및 분석 피드백:</label>
-                            <input type="text" class="feedback-input" style="flex:1;" value="${task.issueText || ''}" placeholder="예: 장비 수급 지연, 컷 누락 주의 등 기록" onchange="updateFeedback('${task.id}', 'issueText', this.value)">
+                            <input type="text" class="feedback-input" style="flex:1; margin-left:10px;" value="${task.issueText || ''}" placeholder="현장 분석 내용 기입" onchange="updateFeedback('${task.id}', 'issueText', this.value)">
                         </div>
                     </div>
                 `;
@@ -551,34 +595,17 @@
 
         function updateFeedback(id, field, value) {
             let task = state.tasks.find(t => t.id === id);
-            if(task) {
-                task[field] = value;
-                saveData();
-            }
+            if(task) { task[field] = value; saveData(); }
         }
 
         function restoreTask(id) {
             let task = state.tasks.find(t => t.id === id);
-            if (task) {
-                task.checked = false; 
-                saveData(); renderRows();
-            }
+            if (task) { task.checked = false; saveData(); renderRows(); }
         }
 
-        function toggleArchiveView() {
-            document.getElementById('archive-content-panel').classList.toggle('open');
-        }
-
-        function adjustZoom(amt) {
-            state.cellWidth = Math.max(40, Math.min(250, state.cellWidth + amt));
-            renderAll();
-        }
-
-        function resetAllData() {
-            if (confirm("마스터 데이터가 영구 초기화됩니다.")) {
-                localStorage.clear(); location.reload();
-            }
-        }
+        function toggleArchiveView() { document.getElementById('archive-content-panel').classList.toggle('open'); }
+        function adjustZoom(amt) { state.cellWidth = Math.max(30, Math.min(180, state.cellWidth + amt)); renderAll(); }
+        function resetAllData() { if (confirm("데이터를 완전히 포맷팅하시겠습니까?")) { localStorage.clear(); location.reload(); } }
 
         function renderAll() {
             renderHeader();
