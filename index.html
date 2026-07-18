@@ -112,8 +112,8 @@
             margin-left: 6px; margin-right: 6px;
         }
         .time-bar-element.rest-auto-bar {
-            background: repeating-linear-gradient(45deg, #334155, #334155 10px, #475569 10px, #475569 20px) !important;
-            opacity: 0.85; border: 1px dashed var(--text-muted);
+            background: repeating-linear-gradient(45deg, #22293a, #22293a 10px, #334155 10px, #334155 20px) !important;
+            opacity: 0.85; border: 1px dashed #64748b; z-index: 2; pointer-events: auto;
         }
 
         .bar-label { flex: 1; text-align: center; font-size: 0.75rem; font-weight: 700; color: white; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; padding: 0 4px; height: 100%; display: flex; align-items: center; justify-content: center; }
@@ -138,8 +138,8 @@
         <div class="navigation-trail" id="nav-trail-container"></div>
         <div class="control-panel">
             <button onclick="addNewRow()">➕ 최상위 마스터 추가</button>
-            <button class="secondary" onclick="adjustZoom(-10)">➖ 축소</button>
-            <button class="secondary" onclick="adjustZoom(10)">➕ 확대</button>
+            <button class="secondary" onclick="adjustZoom(-8)">➖ 축소</button>
+            <button class="secondary" onclick="adjustZoom(8)">➕ 확대</button>
             <button class="danger" onclick="resetAllData()">🔄 초기화</button>
         </div>
     </header>
@@ -176,7 +176,7 @@
             focusWeek: 0,    
             focusDay: 0,     
             projectFocusId: null, 
-            cellWidth: 60,
+            cellWidth: 40, 
             titleBackup: "",
             inputBackups: {},
             collapsedNodes: {},
@@ -211,14 +211,14 @@
         }
 
         function init() {
-            const saved = localStorage.getItem('onset_tracker_absolute_v23');
+            const saved = localStorage.getItem('onset_tracker_absolute_v25');
             if (saved) state = JSON.parse(saved);
             setupTitleInput();
             renderAll();
         }
 
         function saveData() {
-            localStorage.setItem('onset_tracker_absolute_v23', JSON.stringify(state));
+            localStorage.setItem('onset_tracker_absolute_v25', JSON.stringify(state));
         }
 
         function setupTitleInput() {
@@ -242,6 +242,12 @@
             if (state.viewMode === 'WEEK' || state.viewMode === 'DAY') {
                 html += ` <span>&gt;</span> <span class="trail-link" onclick="changeView('WEEK', ${state.focusMonth}, ${state.focusWeek})">${state.focusWeek + 1}주차</span>`;
             }
+            if (state.viewMode === 'DAY') {
+                let weeks = getWeeksMapOfMonth(state.focusMonth);
+                let dayAbs = weeks[state.focusWeek][state.focusDay];
+                let dateNum = dayAbs - MONTH_STARTS[state.focusMonth] + 1;
+                html += ` <span>&gt;</span> <span class="trail-link">${dateNum}일 초정밀 24h</span>`;
+            }
             if (state.projectFocusId) {
                 let pTask = state.tasks.find(t => t.id === state.projectFocusId);
                 if (pTask) {
@@ -254,6 +260,7 @@
         function clearProjectFocus() { state.projectFocusId = null; saveData(); renderAll(); }
         function changeView(mode, m = 0, w = 0, d = 0) {
             state.viewMode = mode; state.focusMonth = m; state.focusWeek = w; state.focusDay = d;
+            if (mode === 'DAY') state.cellWidth = 75; // 일단위 뷰에서는 가독성을 위해 셀 기본크기 보정
             renderAll();
         }
 
@@ -265,6 +272,10 @@
                 let currentWeek = weeks[state.focusWeek];
                 return { start: currentWeek[0], end: currentWeek[currentWeek.length - 1] + 1 };
             }
+            if (state.viewMode === 'DAY') {
+                // 일단위 뷰는 하루(1일)를 24시간 범위로 매핑
+                return { start: 0, end: 24 };
+            }
         }
 
         function renderHeader() {
@@ -272,13 +283,12 @@
             const row1 = document.createElement('div'); row1.className = 'header-row';
             const row2 = document.createElement('div'); row2.className = 'header-row';
             const f1 = document.createElement('div'); f1.className = 'header-frozen-zone'; f1.innerText = "진행 단계 / 컷 목록";
-            const f2 = document.createElement('div'); f2.className = 'header-frozen-zone'; f2.innerText = "2026년 실제 달력 스케일 연동";
+            const f2 = document.createElement('div'); f2.className = 'header-frozen-zone'; f2.innerText = "시간 스케일 타임라인 연동";
             row1.appendChild(f1); row2.appendChild(f2);
             const g1 = document.createElement('div'); g1.className = 'header-grid-zone';
             const g2 = document.createElement('div'); g2.className = 'header-grid-zone';
 
             if (state.viewMode === 'ALL') {
-                // 🛠️ 11월, 12월 오차 없이 전체 일수(365일) 기준으로 정확히 배분 고정
                 for (let m = 0; m < 12; m++) {
                     let mDays = MONTH_DAYS[m];
                     const cell = document.createElement('div'); cell.className = 'main-time-cell'; cell.style.width = `${state.cellWidth * mDays}px`;
@@ -303,13 +313,25 @@
             } else if (state.viewMode === 'WEEK') {
                 let weeks = getWeeksMapOfMonth(state.focusMonth); let currentWeekDays = weeks[state.focusWeek];
                 const cell = document.createElement('div'); cell.className = 'main-time-cell'; cell.style.width = `${state.cellWidth * currentWeekDays.length}px`;
-                cell.innerText = `${state.focusMonth + 1}월 ${state.focusWeek + 1}주차 상세`; cell.onclick = () => changeView('MONTH', state.focusMonth); g1.appendChild(cell);
+                cell.innerText = `${state.focusMonth + 1}월 ${state.focusWeek + 1}주차 상세 (클릭 시 일간 진입)`; cell.onclick = () => changeView('MONTH', state.focusMonth); g1.appendChild(cell);
                 currentWeekDays.forEach((absDay, dIdx) => {
                     const sub = document.createElement('div'); sub.className = 'sub-tick-cell'; sub.style.width = `${state.cellWidth}px`;
                     let dateNum = absDay - MONTH_STARTS[state.focusMonth] + 1; let yoil = getDayOfWeekString(absDay);
                     sub.innerHTML = `${dateNum}일<span style="font-size:0.55rem;color:var(--text-muted);">(${yoil})</span>`;
+                    sub.onclick = () => changeView('DAY', state.focusMonth, state.focusWeek, dIdx);
                     g2.appendChild(sub);
                 });
+            } else if (state.viewMode === 'DAY') {
+                // 🛠️ 일단위 집중뷰: 24시간 + 5분 단위 분할 렌더링
+                for (let h = 0; h < 24; h++) {
+                    const cell = document.createElement('div'); cell.className = 'main-time-cell'; cell.style.width = `${state.cellWidth * 12}px`; // 1시간 = 5분짜리 12개
+                    cell.innerText = `${h}시`; g1.appendChild(cell);
+                    
+                    for (let min = 0; min < 60; min += 5) {
+                        const sub = document.createElement('div'); sub.className = 'sub-tick-cell'; sub.style.width = `${state.cellWidth}px`;
+                        sub.innerText = `${min === 0 ? '00' : min}분`; g2.appendChild(sub);
+                    }
+                }
             }
             row1.appendChild(g1); row2.appendChild(g2); wrapper.appendChild(row1); wrapper.appendChild(row2);
         }
@@ -334,7 +356,6 @@
             return true;
         }
 
-        // 🛠️ 레벨별 테마 색상 강제 지정 처리 파트
         function getColorByDepth(depth) {
             return PALETTE[depth % PALETTE.length];
         }
@@ -365,7 +386,8 @@
         function onRowDragOver(e, targetId) {
             e.preventDefault(); if (rowDragSourceId === targetId) return;
             const targetRow = document.getElementById(`row-node-${targetId}`); if (!targetRow) return;
-            if (e.clientX < 280) {
+            // 🛠️ 왼쪽 패널 근처로 드래그 유도 시 계층 탈출 트리거 활성화
+            if (e.clientX < 290) {
                 targetRow.classList.remove('drag-over-active'); targetRow.classList.add('drag-left-escape');
             } else {
                 targetRow.classList.remove('drag-left-escape'); targetRow.classList.add('drag-over-active');
@@ -392,7 +414,8 @@
             while (p) { if (p.id === rowDragSourceId) { cyclical = true; break; } p = state.tasks.find(t => t.id === p.parentId); }
 
             if (!cyclical) {
-                if (e.clientX < 280) { sourceTask.parentId = targetTask.parentId; } 
+                // 🛠️ [복원] 좌측으로 당기면 소속을 해제하고 상위 레벨(부모의 형제레벨)로 탈출시킴
+                if (e.clientX < 290) { sourceTask.parentId = targetTask.parentId; } 
                 else { sourceTask.parentId = targetId; }
                 updateParentTimeChain(oldParentId); updateParentTimeChain(sourceTask.parentId);
                 saveData(); renderAll();
@@ -413,7 +436,9 @@
         function renderRows() {
             const container = document.getElementById('dynamic-rows-container'); container.innerHTML = '';
             let timeConfig = getActiveTimeRange();
-            let totalVisibleUnits = timeConfig.end - timeConfig.start;
+            
+            // 일단위 뷰에서는 24시간 * 12칸(5분 단위) = 288개 셀 구조
+            let totalVisibleUnits = (state.viewMode === 'DAY') ? 288 : (timeConfig.end - timeConfig.start);
 
             let sortedTasks = [...state.tasks].sort((a, b) => a.start - b.start);
             let treeSorted = [];
@@ -435,7 +460,7 @@
 
                 let isParentNode = state.tasks.some(t => t.parentId === task.id);
                 let depth = getDepth(task);
-                task.color = getColorByDepth(depth); // 🛠️ 동레벨 색상 일치화 보정
+                task.color = getColorByDepth(depth); 
 
                 const row = document.createElement('div');
                 row.className = `task-row ${task.checked ? 'completed-shading' : ''}`;
@@ -446,11 +471,13 @@
 
                 const left = document.createElement('div'); left.className = 'task-left-panel';
                 const grabHandle = document.createElement('div'); grabHandle.className = 'row-grab-handle';
-                grabHandle.innerText = "☰"; grabHandle.draggable = true; grabHandle.ondragstart = (e) => onRowDragStart(e, task.id);
+                grabHandle.innerText = "☰"; grabHandle.draggable = true;
+                grabHandle.ondragstart = (e) => onRowDragStart(e, task.id);
                 left.appendChild(grabHandle);
 
                 if (state.projectFocusId) {
-                    let rootDepth = getDepth(state.tasks.find(t => t.id === state.projectFocusId));
+                    let rootFocusTask = state.tasks.find(t => t.id === state.projectFocusId);
+                    let rootDepth = rootFocusTask ? getDepth(rootFocusTask) : 0;
                     depth = Math.max(0, depth - rootDepth);
                 }
                 for(let d=0; d<depth; d++) {
@@ -513,7 +540,7 @@
                     rightTrack.appendChild(unit);
                 }
 
-                // 🛠️ [복원] 형제 레벨 간 휴식 및 정비 자동 생산 바 알고리즘
+                // 🛠️ [정밀 교정] 동일 줄 안에서 항목과 항목 사이에만 정확하게 자동 휴식 바 렌더링
                 let siblings = state.tasks.filter(t => t.parentId === task.parentId).sort((a,b)=>a.start - b.start);
                 let currentIdx = siblings.findIndex(s => s.id === task.id);
                 if (currentIdx > 0) {
@@ -521,43 +548,61 @@
                     if (prevSibling.end < task.start) {
                         let rStart = Math.max(timeConfig.start, prevSibling.end);
                         let rEnd = Math.min(timeConfig.end, task.start);
-                        if (rStart < rEnd) {
+                        if (rStart < rEnd && state.viewMode !== 'DAY') {
                             const restBar = document.createElement('div');
                             restBar.className = 'time-bar-element rest-auto-bar';
                             restBar.style.left = `${(rStart - timeConfig.start) * state.cellWidth}px`;
                             restBar.style.width = `${((rEnd - rStart) * state.cellWidth) - 12}px`;
-                            restBar.innerHTML = `<div class="bar-label" style="font-size:0.7rem; color:#94a3b8;">☕ 휴식 및 정비 (${rEnd - rStart}일간)</div>`;
+                            restBar.innerHTML = `<div class="bar-label">☕ 휴식 및 정비 (${rEnd - rStart}일간)</div>`;
                             rightTrack.appendChild(restBar);
                         }
                     }
                 }
 
-                // 메인 바 렌더링
-                let oStart = Math.max(timeConfig.start, task.start);
-                let oEnd = Math.min(timeConfig.end, task.end);
+                // 메인 바 위치 계산
+                let oStart = task.start;
+                let oEnd = task.end;
+                let barRenderable = false;
 
-                if (oStart < oEnd) {
+                if (state.viewMode === 'DAY') {
+                    // 일간 모드일 때는 하루 전체(288셀)에 꽉 채워서 보정 렌더링
+                    barRenderable = true;
+                    oStart = 0; oEnd = 24;
+                } else {
+                    let tRange = getActiveTimeRange();
+                    oStart = Math.max(tRange.start, task.start);
+                    oEnd = Math.min(tRange.end, task.end);
+                    if (oStart < oEnd) barRenderable = true;
+                }
+
+                if (barRenderable) {
                     const bar = document.createElement('div'); bar.className = 'time-bar-element';
                     bar.style.backgroundColor = task.color;
-                    bar.style.left = `${(oStart - timeConfig.start) * state.cellWidth}px`;
-                    bar.style.width = `${((oEnd - oStart) * state.cellWidth) - 12}px`;
+                    
+                    let leftOffset = (state.viewMode === 'DAY') ? 0 : (oStart - timeConfig.start);
+                    let widthUnits = (state.viewMode === 'DAY') ? 288 : (oEnd - oStart);
+
+                    bar.style.left = `${leftOffset * state.cellWidth}px`;
+                    bar.style.width = `${(widthUnits * state.cellWidth) - 12}px`;
 
                     const hL = document.createElement('div'); hL.className = 'resizer';
                     const lbl = document.createElement('div'); lbl.className = 'bar-label';
                     lbl.innerHTML = `<span>⏳ ${task.name} (${task.end - task.start}일간)</span>`;
                     
+                    // 🛠️ 상위/하위 상관없이 클릭 우선순위를 보장하기 위한 분리 레이어 처리
                     let isMovingGuard = false;
-                    lbl.onmousedown = (e) => {
+                    bar.onmousedown = (e) => {
+                        if (e.target.classList.contains('resizer')) return; // 리사이저 클릭 패스
                         if (e.buttons !== 1) return;
-                        e.stopPropagation(); isMovingGuard = false;
+                        e.stopPropagation();
+                        isMovingGuard = false;
                         startDrag(task.id, 'move', e.clientX);
                     };
-                    lbl.onmousemove = () => { isMovingGuard = true; };
+                    bar.onmousemove = () => { isMovingGuard = true; };
                     
-                    // 🛠️ 집중뷰 실행 대상 범위 개방 (모든 노드 허용)
-                    lbl.onclick = (e) => {
-                        e.stopPropagation();
-                        if (!isMovingGuard) {
+                    bar.onmouseup = (e) => {
+                        if (!isMovingGuard && !e.target.classList.contains('resizer')) {
+                            e.stopPropagation();
                             state.projectFocusId = (state.projectFocusId === task.id) ? null : task.id;
                             saveData(); renderAll();
                         }
@@ -565,13 +610,13 @@
 
                     const hR = document.createElement('div'); hR.className = 'resizer';
 
-                    // 최상위 마스터를 제외한 모든 이동 및 길이조절 락/언락 적용
-                    if (!isParentNode) {
+                    // 상위 목록 길이 조절 봉인 규칙 유지
+                    if (!isParentNode && state.viewMode !== 'DAY') {
                         bar.appendChild(hL); bar.appendChild(lbl); bar.appendChild(hR);
                         hL.onmousedown = (e) => { e.stopPropagation(); startDrag(task.id, 'left', e.clientX); };
                         hR.onmousedown = (e) => { e.stopPropagation(); startDrag(task.id, 'right', e.clientX); };
                     } else {
-                        bar.appendChild(lbl); lbl.style.cursor = 'move';
+                        bar.appendChild(lbl);
                     }
                     rightTrack.appendChild(bar);
                 }
@@ -585,6 +630,7 @@
         function startDrag(id, type, x) {
             currentDragId = id; dragType = type; dragStartX = x;
             let task = state.tasks.find(t => t.id === id);
+            if(!task) return;
             dragStartS = task.start; dragStartE = task.end;
             originalTasksState = JSON.parse(JSON.stringify(state.tasks));
             
@@ -595,11 +641,10 @@
         }
 
         function onDragMove(e) {
-            if (!currentDragId) return;
+            if (!currentDragId || state.viewMode === 'DAY') return; // 일간 모드에서는 드래그 수정 잠금
             e.stopPropagation();
             
             let deltaX = e.clientX - dragStartX;
-            // 🛠️ 집중뷰 및 타임라인 모드에 구애받지 않는 절대 1대1 스케일 오프셋 매핑
             let cellDelta = Math.round(deltaX / state.cellWidth);
 
             state.tasks = JSON.parse(JSON.stringify(originalTasksState));
@@ -607,7 +652,6 @@
 
             if (dragType === 'move') {
                 let ns = dragStartS + cellDelta; let ne = dragStartE + cellDelta;
-                // 🛠️ 맨 앞 부분 드롭 시 튕겨나가지 않게 강제 클리핑 보정
                 if (ns < 0) { ne = task.end - task.start; ns = 0; }
                 if (ne > 365) { ns = 365 - (task.end - task.start); ne = 365; }
                 task.start = ns; task.end = ne; 
@@ -653,7 +697,9 @@
 
         function restoreTask(id) { let task = state.tasks.find(t => t.id === id); if (task) { task.checked = false; saveData(); renderAll(); } }
         function toggleArchiveView() { document.getElementById('archive-content-panel').classList.toggle('open'); }
-        function adjustZoom(amt) { state.cellWidth = Math.max(25, Math.min(200, state.cellWidth + amt)); renderAll(); }
+        
+        // 🛠️ 1월부터 12월이 화면에 다 보이도록 배율 축소 한계폭 완화 (최소값 5로 하향조정)
+        function adjustZoom(amt) { state.cellWidth = Math.max(5, Math.min(200, state.cellWidth + amt)); renderAll(); }
         function resetAllData() { if (confirm("모든 데이터를 포맷팅하시겠습니까?")) { localStorage.clear(); location.reload(); } }
 
         function renderAll() { renderTrail(); renderHeader(); renderRows(); renderArchive(); }
