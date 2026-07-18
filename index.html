@@ -59,13 +59,6 @@
             background: #0f172a; position: sticky; left: 0; z-index: 25; height: 42px;
         }
         
-        /* 루트 탈출 드롭존 전용 스타일 */
-        .root-drop-zone {
-            background: #1e293b; color: #f59e0b; font-size: 0.75rem; text-align: center;
-            padding: 4px; border: 1px dashed var(--primary-color); cursor: pointer; display: none;
-        }
-        .root-drop-zone.drag-over-active { background: #1e3a8a !important; display: block; }
-
         .header-grid-zone { display: flex; }
         
         .main-time-cell {
@@ -84,10 +77,12 @@
         .task-row { display: flex; border-bottom: 1px solid var(--border-color); background: var(--card-bg); position: relative; }
         .task-row.completed-shading { opacity: 0.4; background: #0f172a; } 
         .task-row.drag-over-active { background: #1e3a8a !important; border-left: 4px solid #3b82f6; }
-        
+        .task-row.drag-left-escape { border-left: 6px solid #ef4444 !important; background: #3b0712 !important; }
+
         .task-left-panel {
             width: 380px; min-width: 380px; padding: 6px 8px; border-right: 2px solid var(--border-color);
             display: flex; align-items: center; gap: 6px; background: #1e293b; position: sticky; left: 0; z-index: 15;
+            transition: background 0.2s;
         }
 
         .row-grab-handle {
@@ -111,7 +106,6 @@
         .task-right-track { position: relative; display: flex; background: #0f172a; height: 52px; }
         .track-grid-unit { border-right: 1px dashed rgba(51, 65, 85, 0.2); height: 100%; }
 
-        /* 🛠️ 좌우 1칸 또는 6px 마진 보정으로 겹침 현상을 원천 차단하는 인디게이터 바 */
         .time-bar-element {
             position: absolute; height: 34px; top: 9px;
             border-radius: 6px; display: flex; justify-content: space-between; align-items: center;
@@ -150,7 +144,6 @@
     </header>
 
     <div class="timeline-board">
-        <div id="master-root-dropzone" class="root-drop-zone">🔲 여기에 드롭하면 최상위 마스터 공정 계층으로 복귀(탈출)합니다.</div>
         <div class="timeline-container-scroll">
             <div class="timeline-table">
                 <div class="table-header" id="master-render-header"></div>
@@ -218,15 +211,14 @@
         }
 
         function init() {
-            const saved = localStorage.getItem('onset_tracker_absolute_v21');
+            const saved = localStorage.getItem('onset_tracker_absolute_v22');
             if (saved) state = JSON.parse(saved);
             setupTitleInput();
-            setupRootDropZone();
             renderAll();
         }
 
         function saveData() {
-            localStorage.setItem('onset_tracker_absolute_v21', JSON.stringify(state));
+            localStorage.setItem('onset_tracker_absolute_v22', JSON.stringify(state));
         }
 
         function setupTitleInput() {
@@ -236,27 +228,6 @@
             titleInput.onkeydown = (e) => {
                 if (e.key === 'Enter') { state.titleBackup = titleInput.value; titleInput.blur(); saveData(); }
                 else if (e.key === 'Escape') { titleInput.value = state.titleBackup; titleInput.blur(); }
-            };
-        }
-
-        // 🛠️ 하위 계층에서 아예 상위 밖으로 던져서 꺼낼 수 있는 전역 루트 드롭 영역 설정
-        function setupRootDropZone() {
-            const rZone = document.getElementById('master-root-dropzone');
-            rZone.ondragover = (e) => { e.preventDefault(); rZone.classList.add('drag-over-active'); };
-            rZone.ondragleave = () => { rZone.classList.remove('drag-over-active'); };
-            rZone.ondrop = (e) => {
-                e.preventDefault();
-                rZone.classList.remove('drag-over-active');
-                if (!rowDragSourceId) return;
-                let srcTask = state.tasks.find(t => t.id === rowDragSourceId);
-                if (srcTask) {
-                    let oldParent = srcTask.parentId;
-                    srcTask.parentId = null; // 최상위로 탈출
-                    updateParentTimeChain(oldParent);
-                    saveData(); renderAll();
-                }
-                rowDragSourceId = null;
-                rZone.style.display = 'none';
             };
         }
 
@@ -401,31 +372,52 @@
         function onRowDragStart(e, id) {
             rowDragSourceId = id;
             e.dataTransfer.effectAllowed = "move";
-            document.getElementById('master-root-dropzone').style.display = 'block';
         }
 
+        // 🛠️ 마우스가 좌측 영역(ClientX가 낮음)으로 치우치면 상위 계층(탈출) 모드로 감지하는 드래그 오버 시스템
         function onRowDragOver(e, targetId) {
             e.preventDefault();
             if (rowDragSourceId === targetId) return;
-            document.getElementById(`row-node-${targetId}`)?.classList.add('drag-over-active');
+            
+            const targetRow = document.getElementById(`row-node-${targetId}`);
+            if (!targetRow) return;
+
+            // 마우스의 절대 위치 좌표가 왼쪽 패널(380px) 안쪽으로 들어가면 '상위 탈출' 상태로 시각적 전환
+            if (e.clientX < 280) {
+                targetRow.classList.remove('drag-over-active');
+                targetRow.classList.add('drag-left-escape');
+            } else {
+                targetRow.classList.remove('drag-left-escape');
+                targetRow.classList.add('drag-over-active');
+            }
         }
 
         function onRowDragLeave(targetId) {
-            document.getElementById(`row-node-${targetId}`)?.classList.remove('drag-over-active');
+            const targetRow = document.getElementById(`row-node-${targetId}`);
+            if (targetRow) {
+                targetRow.classList.remove('drag-over-active');
+                targetRow.classList.remove('drag-left-escape');
+            }
         }
 
         function onRowDrop(e, targetId) {
             e.preventDefault();
-            document.getElementById(`row-node-${targetId}`)?.classList.remove('drag-over-active');
-            document.getElementById('master-root-dropzone').style.display = 'none';
+            const targetRow = document.getElementById(`row-node-${targetId}`);
+            if (targetRow) {
+                targetRow.classList.remove('drag-over-active');
+                targetRow.classList.remove('drag-left-escape');
+            }
+
             if (!rowDragSourceId || rowDragSourceId === targetId) return;
 
             let sourceTask = state.tasks.find(t => t.id === rowDragSourceId);
-            if (!sourceTask) return;
+            let targetTask = state.tasks.find(t => t.id === targetId);
+            if (!sourceTask || !targetTask) return;
 
             let oldParentId = sourceTask.parentId;
 
-            let p = state.tasks.find(t => t.id === targetId);
+            // 순환참조 방지 가드 레일
+            let p = targetTask;
             let cyclical = false;
             while (p) {
                 if (p.id === rowDragSourceId) { cyclical = true; break; }
@@ -433,9 +425,14 @@
             }
 
             if (!cyclical) {
-                sourceTask.parentId = targetId;
+                // 🛠️ 왼쪽으로 던졌으면 타겟 항목의 부모 레벨(즉 동레벨 부모)로 편입, 아니면 하위로 편입
+                if (e.clientX < 280) {
+                    sourceTask.parentId = targetTask.parentId; 
+                } else {
+                    sourceTask.parentId = targetId;
+                }
                 updateParentTimeChain(oldParentId);
-                updateParentTimeChain(targetId);
+                updateParentTimeChain(sourceTask.parentId);
                 saveData(); renderAll();
             }
             rowDragSourceId = null;
@@ -583,7 +580,6 @@
                     const bar = document.createElement('div'); bar.className = 'time-bar-element';
                     bar.style.backgroundColor = task.color || '#3b82f6';
 
-                    // 🛠️ 마진 간격을 6px보다 넉넉히 주어 양방향 1칸 덜 겹치도록 정밀 위치 지정
                     bar.style.left = `${renderLeftCell * state.cellWidth}px`;
                     bar.style.width = `${(renderWidthCells * state.cellWidth) - 12}px`;
 
@@ -592,14 +588,19 @@
                     lbl.innerHTML = `<span>⏳ ${task.name} (${unitText})</span>`;
                     
                     let isMovingGuard = false;
+                    
+                    // 🛠️ 마우스 포인터 꼬임 현상 해결: 마우스 다운 시 윈도우 전역 이벤트를 캡처링 단계에서 인터셉트
                     lbl.onmousedown = (e) => {
                         if (e.buttons !== 1) return;
                         e.stopPropagation();
                         isMovingGuard = false;
                         startDrag(task.id, 'move', e.clientX);
                     };
+                    
                     lbl.onmousemove = () => { isMovingGuard = true; };
-                    lbl.onmouseup = (e) => {
+                    
+                    // 집중뷰 토글 전용 이벤트
+                    lbl.onclick = (e) => {
                         e.stopPropagation();
                         if (!isMovingGuard) {
                             state.projectFocusId = (state.projectFocusId === task.id) ? null : task.id;
@@ -625,21 +626,25 @@
         let currentDragId = null, dragType = null, dragStartX = 0, dragStartS = 0, dragStartE = 0;
         let originalTasksState = [];
 
+        // 🛠️ 마우스가 어디를 가든 무조건 창 전체에서 캐치하도록 하는 완벽 격리 리스너 엔진
         function startDrag(id, type, x) {
             currentDragId = id; dragType = type; dragStartX = x;
             let task = state.tasks.find(t => t.id === id);
             dragStartS = task.start; dragStartE = task.end;
             originalTasksState = JSON.parse(JSON.stringify(state.tasks));
             
-            // 🛠️ 집중뷰에서도 완벽하게 탈출/해제되도록 전역 윈도우 스코프 리스너 강제 고정
-            window.removeEventListener('mousemove', onDragMove);
-            window.removeEventListener('mouseup', endDrag);
-            window.addEventListener('mousemove', onDragMove);
-            window.addEventListener('mouseup', endDrag);
+            window.removeEventListener('mousemove', onDragMove, true);
+            window.removeEventListener('mouseup', endDrag, true);
+            
+            // true 인자를 주어 캡처링 모드로 최우선 강제 집행
+            window.addEventListener('mousemove', onDragMove, true);
+            window.addEventListener('mouseup', endDrag, true);
         }
 
         function onDragMove(e) {
             if (!currentDragId) return;
+            e.stopPropagation(); // 하위 인디케이터가 이벤트를 훔치지 못하게 방어
+            
             let deltaX = e.clientX - dragStartX;
             let cellDelta = Math.round(deltaX / state.cellWidth);
 
@@ -659,10 +664,11 @@
             updateParentTimeChain(task.parentId); renderRows();
         }
 
-        function endDrag() {
+        function endDrag(e) {
+            if (e) e.stopPropagation();
             currentDragId = null;
-            window.removeEventListener('mousemove', onDragMove);
-            window.removeEventListener('mouseup', endDrag);
+            window.removeEventListener('mousemove', onDragMove, true);
+            window.removeEventListener('mouseup', endDrag, true);
             saveData(); renderAll(); 
         }
 
