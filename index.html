@@ -63,9 +63,8 @@
         
         .main-time-cell {
             border-right: 2px solid var(--border-color); display: flex; flex-direction: column; align-items: center; justify-content: center;
-            font-size: 0.85rem; font-weight: bold; color: var(--text-color); background: #111827; height: 42px; cursor: pointer;
+            font-size: 0.85rem; font-weight: bold; color: var(--text-color); background: #111827; height: 42px;
         }
-        .main-time-cell:hover { background: #1e293b; }
         
         .sub-tick-row { display: flex; background: #0b0f19; height: 24px; border-bottom: 1px solid var(--border-color); }
         .sub-tick-cell {
@@ -75,7 +74,7 @@
 
         /* 항목 레벨 디자인 */
         .task-row { display: flex; border-bottom: 1px solid var(--border-color); background: var(--card-bg); position: relative; }
-        .task-row.completed-shading { opacity: 0.35; background: #0f172a; } /* 체크 완료 시 음영 처리 */
+        .task-row.completed-shading { opacity: 0.4; background: #0f172a; } 
         
         .task-left-panel {
             width: 380px; min-width: 380px; padding: 6px 12px; border-right: 2px solid var(--border-color);
@@ -102,21 +101,26 @@
             border-radius: 6px; display: flex; justify-content: space-between; align-items: center;
             box-shadow: 0 4px 6px rgba(0,0,0,0.3); cursor: pointer;
         }
-        .bar-label { flex: 1; text-align: center; font-size: 0.75rem; font-weight: 700; color: white; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; padding: 0 5px; height: 100%; display: flex; align-items: center; justify-content: center; }
+        .bar-label { flex: 1; text-align: center; font-size: 0.75rem; font-weight: 700; color: white; overflow: hidden; white-space: nowrap; text-overflow: min-content; padding: 0 2px; height: 100%; display: flex; align-items: center; justify-content: center; }
         .resizer { width: 6px; height: 100%; background: rgba(255, 255, 255, 0.25); cursor: ew-resize; }
 
         /* 자동 휴식 정비 바 */
         .time-bar-element.break-auto-bar {
             background: repeating-linear-gradient(45deg, #0d9488, #0d9488 10px, #115e59 10px, #115e59 20px) !important;
-            cursor: not-allowed; opacity: 0.6;
+            cursor: not-allowed; opacity: 0.5;
         }
 
-        /* 완료 보관소 피드백 아코디언 */
+        /* 완료 보관소 및 피드백 입력 폼 디자인 */
         .archive-section { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 15px; margin-top: 10px; }
         .archive-header { display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
         .archive-content { display: none; margin-top: 15px; border-top: 1px solid var(--border-color); padding-top: 10px; }
         .archive-content.open { display: block; }
-        .archived-item { display: flex; justify-content: space-between; align-items: center; padding: 8px; border-bottom: 1px solid #334155; font-size: 0.85rem; }
+        
+        .archived-item { display: flex; flex-direction: column; gap: 8px; padding: 12px; border-bottom: 1px solid #334155; background: #111827; border-radius: 6px; margin-bottom: 8px; }
+        .archive-top { display: flex; justify-content: space-between; align-items: center; }
+        .feedback-form { display: flex; gap: 10px; align-items: center; width: 100%; margin-top: 5px; background: #1e293b; padding: 8px; border-radius: 6px; }
+        .feedback-input { background: #0f172a; border: 1px solid var(--border-color); color: var(--text-color); padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; }
+        .feedback-select { background: #0f172a; border: 1px solid var(--border-color); color: #f59e0b; padding: 4px; border-radius: 4px; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -145,21 +149,21 @@
         </div>
     </div>
 
+    <!-- 평가 시스템이 탑재된 아카이빙 대시보드 -->
     <div class="archive-section">
         <div class="archive-header" onclick="toggleArchiveView()">
-            <h3>📦 완료된 항목 목록 (음영 처리 및 누적 추적)</h3>
+            <h3>📦 완료된 항목 및 프로덕션 피드백 분석기</h3>
             <div style="background:#334155; padding:4px 10px; border-radius:6px; font-size:0.8rem; color:#f59e0b; font-weight:bold;" id="archive-count-badge">0개 완료</div>
         </div>
         <div class="archive-content" id="archive-content-panel"></div>
     </div>
 
     <script>
-        // 고유 데이터 패키지 상태 관리
         let state = {
             year: 2026,
             currentParentId: null, 
-            viewScale: 'year', // year(1~12월) -> month(주차) -> week(일차) -> day(24시) -> hour(5분)
-            selectedMonth: 0,  // 0~11
+            viewScale: 'year', 
+            selectedMonth: 0,  
             selectedWeek: 0,
             selectedDay: 1,
             selectedHour: 0,
@@ -167,10 +171,9 @@
             titleBackup: "",
             inputBackups: {},
             tasks: [
-                { id: "t-1", parentId: null, name: "수박 판매 프로덕션 빌드업", start: 0, end: 3, color: "#3b82f6", checked: false },
-                { id: "t-2", parentId: "t-1", name: "시장 트렌드 분석 및 자료조사", start: 0, end: 2, color: "#a855f7", checked: false },
-                { id: "t-3", parentId: "t-2", name: "온라인 유통 채널 현황 조사", start: 1, end: 5, color: "#eab308", checked: false },
-                { id: "t-4", parentId: "t-3", name: "구글 트렌드 키워드 파싱 트래킹", start: 3, end: 9, color: "#10b981", checked: false }
+                { id: "t-1", parentId: null, name: "수박 판매 프로덕션 빌드업", start: 0, end: 3, color: "#3b82f6", checked: false, repeatCount: 1, reviewScore: "⭐⭐⭐⭐⭐", issueText: "순조로움" },
+                { id: "t-2", parentId: "t-1", name: "시장 트렌드 분석 및 자료조사", start: 0, end: 2, color: "#a855f7", checked: false, repeatCount: 1, reviewScore: "⭐⭐⭐⭐⭐", issueText: "" },
+                { id: "t-3", parentId: "t-2", name: "온라인 유통 채널 현황 조사", start: 0, end: 2, color: "#eab308", checked: false, repeatCount: 1, reviewScore: "⭐⭐⭐⭐⭐", issueText: "" }
             ]
         };
 
@@ -178,7 +181,7 @@
         const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
 
         function init() {
-            const saved = localStorage.getItem('onset_perfect_calendar_timeline_v6');
+            const saved = localStorage.getItem('onset_linked_timeline_v7');
             if (saved) state = JSON.parse(saved);
             
             setupTitleInput();
@@ -187,25 +190,27 @@
         }
 
         function saveData() {
-            localStorage.setItem('onset_perfect_calendar_timeline_v6', JSON.stringify(state));
+            localStorage.setItem('onset_linked_timeline_v7', JSON.stringify(state));
             renderArchive();
         }
 
-        // 엔터 미입력시 원상태 복귀(Blur Revert) 타이틀 기어
+        // ESC 리버트 및 엔터 완료 시스템 (타이틀 가드)
         function setupTitleInput() {
             const titleInput = document.getElementById('main-title');
             titleInput.onfocus = () => { state.titleBackup = titleInput.value; };
-            titleInput.onblur = () => { titleInput.value = state.titleBackup; };
+            titleInput.onblur = () => { titleInput.value = state.titleBackup; }; // 저장되지 않으면 롤백
             titleInput.onkeydown = (e) => {
                 if (e.key === 'Enter') {
                     state.titleBackup = titleInput.value;
                     titleInput.blur();
                     saveData();
+                } else if (e.key === 'Escape') {
+                    titleInput.value = state.titleBackup;
+                    titleInput.blur();
                 }
             };
         }
 
-        // 경로 트레일 뷰어
         function renderTrail() {
             const container = document.getElementById('nav-trail-container');
             container.innerHTML = '';
@@ -214,7 +219,7 @@
             if (state.viewScale !== 'year') html += ` <span>&gt;</span> <span class="trail-link" onclick="jumpToScale('month', ${state.selectedMonth})">${state.selectedMonth + 1}월</span>`;
             if (['week', 'day', 'hour'].includes(state.viewScale)) html += ` <span>&gt;</span> <span class="trail-link" onclick="jumpToScale('week', ${state.selectedMonth}, ${state.selectedWeek})">${state.selectedWeek + 1}주차</span>`;
             if (['day', 'hour'].includes(state.viewScale)) html += ` <span>&gt;</span> <span class="trail-link" onclick="jumpToScale('day', ${state.selectedMonth}, ${state.selectedWeek}, ${state.selectedDay})">${state.selectedDay}일</span>`;
-            if (state.viewScale === 'hour') html += ` <span>&gt;</span> <span class="trail-link">${state.selectedHour}시 (5분 단위)</span>`;
+            if (state.viewScale === 'hour') html += ` <span>&gt;</span> <span class="trail-link">${state.selectedHour}시</span>`;
             
             container.innerHTML = html;
         }
@@ -222,10 +227,12 @@
         function jumpToScale(scale, m=0, w=0, d=1, h=0) {
             state.viewScale = scale;
             state.selectedMonth = m; state.selectedWeek = w; state.selectedDay = d; state.selectedHour = h;
+            
+            // 상위로 점프 시 해당 깊이 레벨의 상위 ID 설정 복원
+            if(scale === 'year') state.currentParentId = null;
             renderTrail(); renderAll();
         }
 
-        // 📅 실제 달력 연동 기반 동적 칸 배열 연산 엔진
         function getDaysInMonth(year, month) { return new Date(year, month + 1, 0).getDate(); }
         
         function getWeeksInMonth(year, month) {
@@ -235,11 +242,11 @@
         }
 
         function getMaxCells() {
-            if (state.viewScale === 'year') return 12; // 1~12월
-            if (state.viewScale === 'month') return getWeeksInMonth(state.year, state.selectedMonth); // 실제 월 주차
-            if (state.viewScale === 'week') return 7; // 7일간
-            if (state.viewScale === 'day') return 24; // 24시간
-            if (state.viewScale === 'hour') return 12; // 1시간 속 5분 단위 = 12칸
+            if (state.viewScale === 'year') return 12; 
+            if (state.viewScale === 'month') return getWeeksInMonth(state.year, state.selectedMonth); 
+            if (state.viewScale === 'week') return 7; 
+            if (state.viewScale === 'day') return 24; 
+            if (state.viewScale === 'hour') return 12; // 5분 단위 (총 12칸 = 60분)
             return 12;
         }
 
@@ -253,7 +260,7 @@
             return `${diff}칸`;
         }
 
-        // 📐 클래식 눈금 헤더 완벽 렌더러 (프레임 클릭 이동 내장)
+        // 헤더 프레임 클릭 이동 제거 (순수 타임라인 렌더링 기능만 박제)
         function renderHeader() {
             const wrapper = document.getElementById('master-render-header');
             wrapper.innerHTML = '';
@@ -262,7 +269,7 @@
             const row2 = document.createElement('div'); row2.className = 'header-row';
 
             const f1 = document.createElement('div'); f1.className = 'header-frozen-zone'; f1.innerText = "진행 단계 / 컷 목록";
-            const f2 = document.createElement('div'); f2.className = 'header-frozen-zone'; f2.innerText = "5분 단위 세부 눈금 눈설정";
+            const f2 = document.createElement('div'); f2.className = 'header-frozen-zone'; f2.innerText = "시간 스케일 세부 가이드";
             row1.appendChild(f1); row2.appendChild(f2);
 
             const g1 = document.createElement('div'); g1.className = 'header-grid-zone';
@@ -271,56 +278,53 @@
             let cells = getMaxCells();
 
             for (let i = 0; i < cells; i++) {
-                const cell = document.createElement('div');
-                cell.className = 'main-time-cell';
-                cell.style.width = `${state.cellWidth}px`;
-
-                const subTick = document.createElement('div');
-                subTick.className = 'sub-tick-cell';
-                subTick.style.width = `${state.cellWidth}px`;
+                const cell = document.createElement('div'); cell.className = 'main-time-cell'; cell.style.width = `${state.cellWidth}px`;
+                const subTick = document.createElement('div'); subTick.className = 'sub-tick-cell'; subTick.style.width = `${state.cellWidth}px`;
                 subTick.innerText = "••";
 
-                if (state.viewScale === 'year') {
-                    cell.innerText = `${i+1}월`;
-                    cell.onclick = () => jumpToScale('month', i);
-                } 
-                else if (state.viewScale === 'month') {
-                    cell.innerText = `${i+1}주차`;
-                    cell.onclick = () => jumpToScale('week', state.selectedMonth, i);
-                } 
+                if (state.viewScale === 'year') cell.innerText = `${i+1}월`;
+                else if (state.viewScale === 'month') cell.innerText = `${i+1}주차`;
                 else if (state.viewScale === 'week') {
-                    // 실제 달력 요일 계산 매핑
                     let startOffset = new Date(state.year, state.selectedMonth, 1).getDay();
                     let targetDay = (state.selectedWeek * 7) + i + 1 - startOffset;
                     let maxDays = getDaysInMonth(state.year, state.selectedMonth);
-                    
                     if (targetDay > 0 && targetDay <= maxDays) {
                         let dayObj = new Date(state.year, state.selectedMonth, targetDay);
                         cell.innerText = `${targetDay}일(${WEEKDAYS[dayObj.getDay()]})`;
-                        cell.onclick = () => jumpToScale('day', state.selectedMonth, state.selectedWeek, targetDay);
-                    } else {
-                        cell.innerText = "-";
-                        cell.style.opacity = "0.3";
-                    }
+                    } else { cell.innerText = "-"; cell.style.opacity = "0.3"; }
                 } 
-                else if (state.viewScale === 'day') {
-                    cell.innerText = `${i}시`;
-                    cell.onclick = () => jumpToScale('hour', state.selectedMonth, state.selectedWeek, state.selectedDay, i);
-                } 
-                else if (state.viewScale === 'hour') {
-                    cell.innerText = `${i * 5}분`;
-                    subTick.innerText = "5m";
-                }
+                else if (state.viewScale === 'day') cell.innerText = `${i}시`;
+                else if (state.viewScale === 'hour') { cell.innerText = `${i * 5}분`; subTick.innerText = "5m"; }
 
-                g1.appendChild(cell);
-                g2.appendChild(subTick);
+                g1.appendChild(cell); g2.appendChild(subTick);
             }
-
             row1.appendChild(g1); row2.appendChild(g2);
             wrapper.appendChild(row1); wrapper.appendChild(row2);
         }
 
-        // 타임라인 보드 렌더러 (자동 휴식 및 Revert 포커스 아웃 엔진 장착)
+        // 🔗 상하위 목록 타임라인 길이 동적 상호 연동 연산 알고리즘 기어
+        function synchronizeHierarchyChain(childTaskId) {
+            let child = state.tasks.find(t => t.id === childTaskId);
+            if (!child || !child.parentId) return;
+
+            let parent = state.tasks.find(t => t.id === child.parentId);
+            if (!parent) return;
+
+            // 동일한 부모를 가진 모든 하위 자식 스케줄 수집
+            let siblings = state.tasks.filter(t => t.parentId === parent.id);
+            if (siblings.length === 0) return;
+
+            let minStart = Math.min(...siblings.map(s => s.start));
+            let maxEnd = Math.max(...siblings.map(s => s.end));
+
+            // 가드 규칙: 상위는 하위의 전체 합보다 줄어들 수 없으나, 개별적으로 더 늘리는 것은 허용함
+            if (parent.start > minStart) parent.start = minStart;
+            if (parent.end < maxEnd) parent.end = maxEnd;
+
+            // 최상위 루트 노드까지 재귀적으로 상향 전파 연동
+            synchronizeHierarchyChain(parent.id);
+        }
+
         function renderRows() {
             const container = document.getElementById('dynamic-rows-container');
             container.innerHTML = '';
@@ -330,17 +334,15 @@
 
             currentLevelTasks.forEach(task => {
                 const row = document.createElement('div'); 
-                row.className = `task-row ${task.checked ? 'completed-shading' : ''}`; // 완료 음영 비활성화 스타일 적용
+                row.className = `task-row ${task.checked ? 'completed-shading' : ''}`; 
 
                 const left = document.createElement('div'); left.className = 'task-left-panel';
 
-                // 체크박스 핸들러
                 const cb = document.createElement('input'); cb.type = 'checkbox'; cb.className = 'task-checkbox';
                 cb.checked = task.checked;
                 cb.onchange = () => { task.checked = cb.checked; saveData(); renderRows(); };
                 left.appendChild(cb);
 
-                // 컬러 팰릿 
                 const pal = document.createElement('div'); pal.className = 'color-dot-palette';
                 PALETTE.forEach(c => {
                     const dot = document.createElement('div'); dot.className = 'color-dot'; dot.style.backgroundColor = c;
@@ -349,19 +351,20 @@
                 });
                 left.appendChild(pal);
 
-                // 엔터 안누르면 이전 상태 복귀형 인풋 필더(Blur 디폴트화)
+                // ESC 롤백 & Blur 리버트 가드가 장착된 텍스트 편집 인풋 필드
                 const nameInput = document.createElement('input'); nameInput.className = 'task-name-input';
                 nameInput.value = task.name;
                 
                 nameInput.onfocus = () => { state.inputBackups[task.id] = nameInput.value; };
-                nameInput.onblur = () => { nameInput.value = state.inputBackups[task.id]; }; // 포커스 잃으면 복귀
+                nameInput.onblur = () => { nameInput.value = state.inputBackups[task.id]; }; 
                 nameInput.onkeydown = (e) => {
                     if (e.key === 'Enter') {
-                        state.inputBackups[task.id] = nameInput.value; // 변경값 박제
+                        state.inputBackups[task.id] = nameInput.value; 
                         task.name = nameInput.value;
+                        nameInput.blur(); saveData(); renderRows();
+                    } else if (e.key === 'Escape') {
+                        nameInput.value = state.inputBackups[task.id];
                         nameInput.blur();
-                        saveData();
-                        renderRows();
                     }
                 };
                 left.appendChild(nameInput);
@@ -372,7 +375,6 @@
 
                 row.appendChild(left);
 
-                // 우측 타임라인 채우기
                 const rightTrack = document.createElement('div'); rightTrack.className = 'task-right-track';
                 rightTrack.style.width = `${totalCells * state.cellWidth}px`;
 
@@ -381,15 +383,15 @@
                     rightTrack.appendChild(unit);
                 }
 
-                // [자동] 휴식 및 촬영 정비 시간 왼쪽 여백 채우기
+                // 자동 휴식 왼쪽 영역 채우기
                 if (task.start > 0) {
                     const breakBar = document.createElement('div'); breakBar.className = 'time-bar-element break-auto-bar';
                     breakBar.style.left = `0px`; breakBar.style.width = `${task.start * state.cellWidth}px`;
-                    breakBar.innerHTML = `<div class="bar-label">☕ [자동] 휴식 시간 (${getDurationLabel(0, task.start)})</div>`;
+                    breakBar.innerHTML = `<div class="bar-label">[${getDurationLabel(0, task.start)}]</div>`;
                     rightTrack.appendChild(breakBar);
                 }
 
-                // 메인 스케줄 바 인디케이터 (클릭시 하위 단계 진입 인터페이스 장착)
+                // 메인 소요시간 우선 인디케이터 바 디자인
                 const bar = document.createElement('div'); bar.className = 'time-bar-element';
                 bar.style.backgroundColor = task.color || '#3b82f6';
                 bar.style.left = `${task.start * state.cellWidth}px`;
@@ -397,11 +399,11 @@
 
                 const hL = document.createElement('div'); hL.className = 'resizer';
                 
-                // 라벨 필드 
+                // 🛑 복잡한 진행텍스트 완전 제거 -> 소요 시간만 고대비 강조 컴팩트 노출 디자인
                 const lbl = document.createElement('div'); lbl.className = 'bar-label';
-                lbl.innerHTML = `<span>[${getDurationLabel(task.start, task.end)}] ${task.name} (클릭시 내부 진입)</span>`;
+                lbl.innerHTML = `<span style="font-size:0.8rem; letter-spacing:-0.5px;">⏳ ${getDurationLabel(task.start, task.end)}</span>`;
                 
-                // 📍 인디케이터 바 클릭시 다이렉트 하위 뎁스 스케일 이동
+                // 인디케이터 바 본체 클릭시 즉시 하위 기획 뎁스 레벨 스케일 자동 이동 연동
                 lbl.onclick = (e) => {
                     e.stopPropagation();
                     state.currentParentId = task.id;
@@ -417,15 +419,15 @@
 
                 hL.onmousedown = (e) => { e.stopPropagation(); startDrag(task.id, 'left', e.clientX); };
                 hR.onmousedown = (e) => { e.stopPropagation(); startDrag(task.id, 'right', e.clientX); };
-                lbl.onmousedown = (e) => { e.stopPropagation(); if (e.altKey || e.buttons === 1 && e.movementX !== 0) startDrag(task.id, 'move', e.clientX); };
+                lbl.onmousedown = (e) => { e.stopPropagation(); if (e.buttons === 1 && e.movementX !== 0) startDrag(task.id, 'move', e.clientX); };
 
                 rightTrack.appendChild(bar);
 
-                // [자동] 휴식 및 촬영 정비 시간 오른쪽 여백 채우기
+                // 자동 휴식 오른쪽 영역 채우기
                 if (task.end < totalCells) {
                     const breakBarEnd = document.createElement('div'); breakBarEnd.className = 'time-bar-element break-auto-bar';
                     breakBarEnd.style.left = `${task.end * state.cellWidth}px`; breakBarEnd.style.width = `${(totalCells - task.end) * state.cellWidth}px`;
-                    breakBarEnd.innerHTML = `<div class="bar-label">☕ [자동] 휴식 시간 (${getDurationLabel(task.end, totalCells)})</div>`;
+                    breakBarEnd.innerHTML = `<div class="bar-label">[${getDurationLabel(task.end, totalCells)}]</div>`;
                     rightTrack.appendChild(breakBarEnd);
                 }
 
@@ -434,7 +436,6 @@
             });
         }
 
-        // 드래그앤드롭 트래킹 허브
         function startDrag(id, type, x) {
             currentDragBarId = id; dragType = type; dragStartX = x;
             let task = state.tasks.find(t => t.id === id);
@@ -452,17 +453,32 @@
             let deltaX = e.clientX - dragStartX;
             let cellDelta = Math.round(deltaX / state.cellWidth);
 
+            // 하위 자식 목록의 최소/최대 한계 범위 제한 계산
+            let siblings = state.tasks.filter(t => t.parentId === task.id);
+            let minAllowedStart = 0;
+            let maxAllowedEnd = totalCells;
+
+            if (siblings.length > 0) {
+                minAllowedStart = Math.min(...siblings.map(s => s.start));
+                maxAllowedEnd = Math.max(...siblings.map(s => s.end));
+            }
+
             if (dragType === 'move') {
                 let ns = dragStartLeft + cellDelta;
                 let ne = dragStartEnd + cellDelta;
-                if (ns >= 0 && ne <= totalCells) { task.start = ns; task.end = ne; }
+                if (ns >= 0 && ne <= totalCells && ns <= minAllowedStart && ne >= maxAllowedEnd) { 
+                    task.start = ns; task.end = ne; 
+                }
             } else if (dragType === 'left') {
                 let ns = dragStartLeft + cellDelta;
-                if (ns >= 0 && ns < task.end) task.start = ns;
+                if (ns >= 0 && ns < task.end && ns <= minAllowedStart) task.start = ns;
             } else if (dragType === 'right') {
                 let ne = dragStartEnd + cellDelta;
-                if (ne > task.start && ne <= totalCells) task.end = ne;
+                if (ne > task.start && ne <= totalCells && ne >= maxAllowedEnd) task.end = ne;
             }
+            
+            // 상하위 체인 묶음 동기화 전동기 작동
+            synchronizeHierarchyChain(task.id);
             renderRows();
         }
 
@@ -481,40 +497,70 @@
                 start: 0,
                 end: 2,
                 color: "#3b82f6",
-                checked: false
+                checked: false,
+                repeatCount: 1,
+                reviewScore: "⭐⭐⭐⭐⭐",
+                issueText: ""
             });
             saveData(); renderRows();
         }
 
-        // 📦 완료 보관소 리스트 빌더 및 상호 완벽 복원 기어
+        // 📦 고도화된 아카이빙 복합 평가 분석 리포트 보관함 시스템
         function renderArchive() {
             const container = document.getElementById('archive-content-panel');
             const badge = document.getElementById('archive-count-badge');
             
             let completed = state.tasks.filter(t => t.checked);
-            badge.innerText = `${completed.length}개 완료`;
+            badge.innerText = `${completed.length}개 완료됨`;
 
             if (completed.length === 0) {
-                container.innerHTML = `<div style="text-align:center; color:var(--text-muted);">현재 완료 보관함이 비어있습니다.</div>`;
+                container.innerHTML = `<div style="text-align:center; color:var(--text-muted); padding:10px;">현재 완료 보관함에 데이터가 없습니다.</div>`;
                 return;
             }
 
             let html = '';
             completed.forEach(task => {
+                // 각 항목별 개별 반복 횟수, 별점 평가, 애로사항 회고 폼 렌더링
                 html += `
                     <div class="archived-item">
-                        <span>🟩 <strong>${task.name}</strong></span>
-                        <button class="secondary" style="padding:4px 8px; font-size:0.75rem;" onclick="restoreTask('${task.id}')">🔄 보관함 복원</button>
+                        <div class="archive-top">
+                            <span>🟩 <strong>${task.name}</strong> <span style="color:var(--text-muted); font-size:0.75rem;">(소요 기간: ${getDurationLabel(task.start, task.end)})</span></span>
+                            <button class="secondary" style="padding:4px 8px; font-size:0.75rem;" onclick="restoreTask('${task.id}')">🔄 타임라인 복원</button>
+                        </div>
+                        <div class="feedback-form">
+                            <label style="font-size:0.75rem; color:var(--text-muted);">반복 횟수:</label>
+                            <input type="number" class="feedback-input" style="width:50px;" value="${task.repeatCount || 1}" min="1" onchange="updateFeedback('${task.id}', 'repeatCount', this.value)">
+                            
+                            <label style="font-size:0.75rem; color:var(--text-muted); margin-left:10px;">만족도 평가:</label>
+                            <select class="feedback-select" onchange="updateFeedback('${task.id}', 'reviewScore', this.value)">
+                                <option value="⭐⭐⭐⭐⭐" ${task.reviewScore === '⭐⭐⭐⭐⭐' ? 'selected' : ''}>⭐⭐⭐⭐⭐ 만족</option>
+                                <option value="⭐⭐⭐⭐" ${task.reviewScore === '⭐⭐⭐⭐' ? 'selected' : ''}>⭐⭐⭐⭐ 우수</option>
+                                <option value="⭐⭐⭐" ${task.reviewScore === '⭐⭐⭐' ? 'selected' : ''}>⭐⭐⭐ 보통</option>
+                                <option value="⭐⭐" ${task.reviewScore === '⭐⭐' ? 'selected' : ''}>⭐⭐ 애로사항 있음</option>
+                                <option value="⭐" ${task.reviewScore === '⭐' ? 'selected' : ''}>⭐ 수정 필요</option>
+                            </select>
+
+                            <label style="font-size:0.75rem; color:var(--text-muted); margin-left:10px;">현장 애로사항 및 분석 피드백:</label>
+                            <input type="text" class="feedback-input" style="flex:1;" value="${task.issueText || ''}" placeholder="예: 장비 수급 지연, 컷 누락 주의 등 기록" onchange="updateFeedback('${task.id}', 'issueText', this.value)">
+                        </div>
                     </div>
                 `;
             });
             container.innerHTML = html;
         }
 
+        function updateFeedback(id, field, value) {
+            let task = state.tasks.find(t => t.id === id);
+            if(task) {
+                task[field] = value;
+                saveData();
+            }
+        }
+
         function restoreTask(id) {
             let task = state.tasks.find(t => t.id === id);
             if (task) {
-                task.checked = false; // 체크를 해제하여 원래 타임라인에서 원상복구 활성화
+                task.checked = false; 
                 saveData(); renderRows();
             }
         }
