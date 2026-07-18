@@ -166,18 +166,16 @@
     </div>
 
     <script>
-        // 고밀도 시간 설계 매트릭스
-        // ALL(54주) -> MONTH(주 단위 슬라이스) -> WEEK(7일 슬라이스) -> DAY(24시간 * 12칸 = 288칸 [5분 단위])
         let state = {
-            viewMode: 'ALL', // ALL, MONTH, WEEK, DAY
-            focusMonth: 0,   // 0 ~ 11
-            focusWeek: 0,    // 0 ~ 4
-            focusDay: 0,     // 0 ~ 6 (월~일)
+            viewMode: 'ALL', 
+            focusMonth: 0,   
+            focusWeek: 0,    
+            focusDay: 0,     
             cellWidth: 70,
             titleBackup: "",
             inputBackups: {},
             collapsedNodes: {},
-            globalBreakText: "휴식 및 정비", // 공백 채우기용 커스텀 텍스트 저장소
+            globalBreakText: "휴식 및 정비", 
             tasks: [
                 { id: "t-1", parentId: null, name: "메인 프로덕션 빌드업", start: 0, end: 12, color: "#3b82f6", checked: false },
                 { id: "t-2", parentId: "t-1", name: "세부 연출 콘티 확정", start: 2, end: 8, color: "#a855f7", checked: false },
@@ -191,14 +189,14 @@
         const DAYS_OF_WEEK = ["월", "화", "수", "목", "금", "토", "일"];
 
         function init() {
-            const saved = localStorage.getItem('onset_tracker_ultra_v9');
+            const saved = localStorage.getItem('onset_tracker_ultra_v10');
             if (saved) state = JSON.parse(saved);
             setupTitleInput();
             renderAll();
         }
 
         function saveData() {
-            localStorage.setItem('onset_tracker_ultra_v9', JSON.stringify(state));
+            localStorage.setItem('onset_tracker_ultra_v10', JSON.stringify(state));
         }
 
         function setupTitleInput() {
@@ -211,7 +209,6 @@
             };
         }
 
-        // 🔗 상위 노드로 즉시 역행 복귀 가능한 내비게이터 트레일 렌더러
         function renderTrail() {
             const container = document.getElementById('nav-trail-container');
             container.innerHTML = '';
@@ -231,20 +228,18 @@
 
         function changeView(mode, m = 0, w = 0, d = 0) {
             state.viewMode = mode; state.focusMonth = m; state.focusWeek = w; state.focusDay = d;
-            if (mode === 'DAY') state.cellWidth = 45; // 24시간 분할 뷰 가독성을 위한 자동 셀 축소 세팅
+            if (mode === 'DAY') state.cellWidth = 45; 
             else state.cellWidth = 70;
             renderAll();
         }
 
-        // 현재 집중 모드 레이어에 맞는 해상도 칸 수와 바운더리 구하기
         function getGridConfig() {
             if (state.viewMode === 'ALL') return { totalCells: TOTAL_WEEKS, label: '주차' };
             if (state.viewMode === 'MONTH') return { totalCells: MONTH_WEEKS[state.focusMonth], label: '주차' };
             if (state.viewMode === 'WEEK') return { totalCells: 7, label: '요일' };
-            if (state.viewMode === 'DAY') return { totalCells: 288, label: '5분' }; // 24시간 * 12칸 = 288칸
+            if (state.viewMode === 'DAY') return { totalCells: 288, label: '5분' }; 
         }
 
-        // 📅 주/일/5분 단위를 계층 구조로 부드럽게 무한 확장하는 다이내믹 가이드 헤더
         function renderHeader() {
             const wrapper = document.getElementById('master-render-header');
             wrapper.innerHTML = '';
@@ -272,6 +267,8 @@
                     for(let w=0; w<weeks; w++) {
                         const sub = document.createElement('div'); sub.className = 'sub-tick-cell';
                         sub.style.width = `${state.cellWidth}px`; sub.innerText = `${w+1}주`;
+                        // 🛠️ 버그 픽스: 첫 페이지에서 하단 주차 클릭 시 다이렉트로 해당 주 집중뷰 전환
+                        sub.onclick = () => changeView('WEEK', idx, w);
                         g2.appendChild(sub);
                     }
                 });
@@ -302,7 +299,6 @@
                     g2.appendChild(sub);
                 });
             } else if (state.viewMode === 'DAY') {
-                // 24시간 분할 매핑 가이드라인 생성
                 for(let h=0; h<24; h++) {
                     const cell = document.createElement('div');
                     cell.className = 'main-time-cell'; cell.style.width = `${state.cellWidth * 12}px`;
@@ -334,17 +330,42 @@
             return false;
         }
 
-        // 🎬 정밀 타임라인 렌더링 & 시간순 정렬 & 정비 인디케이터 채우기 코어 엔진
+        // 🛠️ 상하위 체인 타임 동기화 연동 처리 핵심 함수
+        function updateParentTimeChain(parentId) {
+            if (!parentId) return;
+            let parent = state.tasks.find(t => t.id === parentId);
+            if (!parent) return;
+
+            let children = state.tasks.filter(t => t.parentId === parentId);
+            if (children.length > 0) {
+                let minStart = Math.min(...children.map(c => c.start));
+                let maxEnd = Math.max(...children.map(c => c.end));
+
+                // 자식의 합보다 줄어들 수는 없지만, 늘어날 수는 있게 방어 조율
+                if (parent.start > minStart) parent.start = minStart;
+                if (parent.end < maxEnd) parent.end = maxEnd;
+            }
+            // 최상단 마스터 단계까지 연쇄 업데이트 상승
+            if (parent.parentId) updateParentTimeChain(parent.parentId);
+        }
+
+        // 🛠️ 상위 항목 이동 시 하위 항목 세트 일괄 동기화 무브먼트 함수
+        function moveAllChildrenSet(parentId, delta) {
+            let children = state.tasks.filter(t => t.parentId === parentId);
+            children.forEach(c => {
+                c.start += delta;
+                c.end += delta;
+                moveAllChildrenSet(c.id, delta); // 하위의 하위 자식까지 트리 전동
+            });
+        }
+
         function renderRows() {
             const container = document.getElementById('dynamic-rows-container');
             container.innerHTML = '';
 
             let conf = getGridConfig();
-
-            // ⏱️ 핵심 요구사항: 더 앞선 시간에 배치된 인디케이터가 레이아웃 상 위로 오게 자동 정렬
             let sortedTasks = [...state.tasks].sort((a, b) => a.start - b.start);
 
-            // 트리 계층 보존하면서 정렬 구조 생성 함수
             let treeSorted = [];
             function buildTree(pId) {
                 sortedTasks.filter(t => t.parentId === pId).forEach(t => {
@@ -391,7 +412,6 @@
                 });
                 left.appendChild(pal);
 
-                // 명확한 취소 핸들러 장착 인풋
                 const nameInput = document.createElement('input'); nameInput.className = 'task-name-input';
                 nameInput.value = task.name;
                 nameInput.onfocus = () => { state.inputBackups[task.id] = nameInput.value; };
@@ -416,7 +436,6 @@
 
                 row.appendChild(left);
 
-                // 우측 드래그 그리드 트랙 바인딩
                 const rightTrack = document.createElement('div'); rightTrack.className = 'task-right-track';
                 rightTrack.style.width = `${conf.totalCells * state.cellWidth}px`;
 
@@ -425,7 +444,6 @@
                     rightTrack.appendChild(unit);
                 }
 
-                // 가드 한계치 내부 상대 범위 렌더 블록화
                 if (task.start < conf.totalCells && task.end > 0) {
                     let dStart = Math.max(0, task.start);
                     let dEnd = Math.min(conf.totalCells, task.end);
@@ -441,7 +459,6 @@
                     let unitText = state.viewMode === 'DAY' ? `${(task.end - task.start)*5}분` : `${task.end - task.start}${conf.label}`;
                     lbl.innerHTML = `<span>⏳ ${unitText}</span>`;
                     
-                    // 인디케이터 클릭 시에도 하위 아코디언 토글 연동 작동
                     lbl.onclick = (e) => {
                         e.stopPropagation();
                         if (children.length > 0) {
@@ -461,8 +478,6 @@
                     rightTrack.appendChild(bar);
                 }
 
-                // 🛠️ 핵심 요구사항: 공백이 있을 때 "휴식 및 정비" 인디케이터 자동 레이아웃 배치
-                // 메인 인디케이터 앞뒤의 유휴 빈 공간을 찾아서 자동 조율
                 let breakBars = [];
                 if (task.start > 0) {
                     breakBars.push({ s: 0, e: task.start });
@@ -482,7 +497,6 @@
                     bLabel.style.color = '#2dd4bf';
                     bLabel.innerText = state.globalBreakText;
 
-                    // 🛑 휴식 인디케이터 클릭 시 편집 인풋 전환 (엔터 미입력/ESC 클릭 시 완벽 롤백 규칙)
                     bBar.onclick = (e) => {
                         e.stopPropagation();
                         bLabel.innerHTML = '';
@@ -519,13 +533,15 @@
             });
         }
 
-        // 고해상도 드래그 매핑 트래커 알고리즘
         let currentDragId = null, dragType = null, dragStartX = 0, dragStartS = 0, dragStartE = 0;
+        let originalTasksState = []; // 드래그 시작 시점의 전체 원본 백업 스냅샷
 
         function startDrag(id, type, x) {
             currentDragId = id; dragType = type; dragStartX = x;
             let task = state.tasks.find(t => t.id === id);
             dragStartS = task.start; dragStartE = task.end;
+            originalTasksState = JSON.parse(JSON.stringify(state.tasks));
+            
             document.addEventListener('mousemove', onDragMove);
             document.addEventListener('mouseup', endDrag);
         }
@@ -538,17 +554,42 @@
             let deltaX = e.clientX - dragStartX;
             let cellDelta = Math.round(deltaX / state.cellWidth);
 
+            // 매 프레임 원본 스냅샷 기반으로 리셋 후 연산 누적하여 연쇄 오류 방지
+            state.tasks = JSON.parse(JSON.stringify(originalTasksState));
+            task = state.tasks.find(t => t.id === currentDragId);
+
             if (dragType === 'move') {
                 let ns = dragStartS + cellDelta;
                 let ne = dragStartE + cellDelta;
-                if (ns >= 0 && ne <= conf.totalCells) { task.start = ns; task.end = ne; }
+                if (ns >= 0 && ne <= conf.totalCells) { 
+                    task.start = ns; 
+                    task.end = ne; 
+                    // 🛠️ 상위 항목 이동 시 하위 항목들도 함께 세트 일괄 이동
+                    moveAllChildrenSet(task.id, cellDelta);
+                }
             } else if (dragType === 'left') {
                 let ns = dragStartS + cellDelta;
-                if (ns >= 0 && ns < task.end) task.start = ns;
+                // 자식의 시작 마지노선 경계 방어막 계산
+                let children = state.tasks.filter(c => c.parentId === task.id);
+                let maxAllowedStart = task.end - 1;
+                if (children.length > 0) {
+                    maxAllowedStart = Math.min(...children.map(c => c.start));
+                }
+                if (ns >= 0 && ns <= maxAllowedStart) task.start = ns;
             } else if (dragType === 'right') {
                 let ne = dragStartE + cellDelta;
-                if (ne > task.start && ne <= conf.totalCells) task.end = ne;
+                // 자식의 끝 마지노선 경계 방어막 계산
+                let children = state.tasks.filter(c => c.parentId === task.id);
+                let minAllowedEnd = task.start + 1;
+                if (children.length > 0) {
+                    minAllowedEnd = Math.max(...children.map(c => c.end));
+                }
+                if (ne >= minAllowedEnd && ne <= conf.totalCells) task.end = ne;
             }
+
+            // 🛠️ 조절이나 이동이 끝난 후 상위 부모 계층 체인 전체 동시 확장 연동 작동
+            updateParentTimeChain(task.parentId);
+
             renderRows();
         }
 
@@ -557,7 +598,7 @@
             document.removeEventListener('mousemove', onDragMove);
             document.removeEventListener('mouseup', endDrag);
             saveData();
-            renderAll(); // 마우스 놓는 순간 시간순 상단 자동 스왑 정렬 재구동
+            renderAll(); 
         }
 
         function addNewRow() {
@@ -578,6 +619,8 @@
                 color: "#a855f7", checked: false
             });
             state.collapsedNodes[pId] = false;
+            // 서브 항목이 추가되었을 때 부모 시간 체인도 즉시 맞춰줌
+            updateParentTimeChain(pId);
             saveData(); renderAll();
         }
 
