@@ -54,7 +54,7 @@
         .table-header { display: flex; flex-direction: column; background: #111827; border-bottom: 2px solid var(--border-color); }
         .header-row { display: flex; }
         .header-frozen-zone {
-            width: 420px; min-width: 420px; padding-left: 15px; display: flex; align-items: center;
+            width: 380px; min-width: 380px; padding-left: 15px; display: flex; align-items: center;
             font-weight: bold; font-size: 0.85rem; color: var(--text-muted); border-right: 2px solid var(--border-color);
             background: #0f172a; position: sticky; left: 0; z-index: 25; height: 42px;
         }
@@ -66,6 +66,7 @@
         }
         .main-time-cell:hover { background: #1e293b; }
         
+        .sub-tick-row { display: flex; background: #0b0f19; height: 24px; border-bottom: 1px solid var(--border-color); }
         .sub-tick-cell {
             border-right: 1px dashed rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center;
             font-size: 0.65rem; color: var(--text-muted); font-family: monospace; cursor: pointer;
@@ -74,14 +75,20 @@
 
         .task-row { display: flex; border-bottom: 1px solid var(--border-color); background: var(--card-bg); position: relative; }
         .task-row.completed-shading { opacity: 0.4; background: #0f172a; } 
-        .task-row.hidden-node { display: none; }
+        .task-row.drag-over-active { background: #1e3a8a !important; border-left: 4px solid #3b82f6; }
         
         .task-left-panel {
-            width: 420px; min-width: 420px; padding: 6px 8px; border-right: 2px solid var(--border-color);
+            width: 380px; min-width: 380px; padding: 6px 8px; border-right: 2px solid var(--border-color);
             display: flex; align-items: center; gap: 6px; background: #1e293b; position: sticky; left: 0; z-index: 15;
         }
 
-        .indent-space { display: inline-block; width: 12px; }
+        /* 🛠️ 세 줄 아이콘 계층 드래그 핸들 스타일 */
+        .row-grab-handle {
+            cursor: grab; color: var(--text-muted); font-size: 1rem; padding: 0 4px; display: flex; align-items: center;
+        }
+        .row-grab-handle:active { cursor: grabbing; color: white; }
+
+        .indent-space { display: inline-block; width: 14px; }
         .toggle-arrow { cursor: pointer; color: #f59e0b; font-weight: bold; padding: 0 2px; font-size: 0.8rem; }
         .task-checkbox { width: 16px; height: 16px; cursor: pointer; z-index: 5; }
         
@@ -93,12 +100,6 @@
             font-size: 0.8rem; flex: 1; padding: 4px; border-radius: 4px; font-weight: bold; cursor: pointer; min-width: 0;
         }
         .task-name-input:focus { background: #0f172a; border-color: var(--primary-color); outline: none; cursor: text; }
-
-        /* 🛠️ 상하위 이동용 드롭다운 스타일 디자인 */
-        .parent-selector {
-            background: #0f172a; color: var(--text-muted); border: 1px solid var(--border-color);
-            font-size: 0.7rem; padding: 2px; border-radius: 4px; width: 65px; cursor: pointer;
-        }
 
         .task-right-track { position: relative; display: flex; background: #0f172a; height: 52px; }
         .track-grid-unit { border-right: 1px dashed rgba(51, 65, 85, 0.2); height: 100%; }
@@ -137,7 +138,7 @@
         <div class="navigation-trail" id="nav-trail-container"></div>
 
         <div class="control-panel">
-            <button onclick="addNewRow()">➕ 최상위 항목 추가</button>
+            <button onclick="addNewRow()">➕ 최상위 마스터 추가</button>
             <button class="secondary" onclick="adjustZoom(-10)">➖ 축소</button>
             <button class="secondary" onclick="adjustZoom(10)">➕ 확대</button>
             <button class="danger" onclick="resetAllData()">🔄 초기화</button>
@@ -180,7 +181,7 @@
             titleBackup: "",
             inputBackups: {},
             collapsedNodes: {},
-            colorPointer: 0, // 하위 목록 색상 순환용 포인터
+            colorPointer: 0,
             tasks: [
                 { id: "p-1", parentId: null, name: "메인 프로덕션 빌드업", start: 0, end: 85, color: "#3b82f6", checked: false },
                 { id: "p-2", parentId: "p-1", name: "세부 연출 콘티 확정", start: 0, end: 35, color: "#a855f7", checked: false },
@@ -212,7 +213,7 @@
         }
 
         function init() {
-            const saved = localStorage.getItem('onset_tracker_absolute_v15');
+            const saved = localStorage.getItem('onset_tracker_absolute_v20');
             if (saved) state = JSON.parse(saved);
             setupTitleInput();
             fillTimeGapsWithTasks();
@@ -220,7 +221,7 @@
         }
 
         function saveData() {
-            localStorage.setItem('onset_tracker_absolute_v15', JSON.stringify(state));
+            localStorage.setItem('onset_tracker_absolute_v20', JSON.stringify(state));
         }
 
         function setupTitleInput() {
@@ -253,17 +254,13 @@
             if (state.projectFocusId) {
                 let pTask = state.tasks.find(t => t.id === state.projectFocusId);
                 if (pTask) {
-                    html += ` <span style="color:#2dd4bf; margin-left:6px; font-weight:bold;">[🎯 뷰: ${pTask.name}]</span> <span class="trail-link" style="color:var(--danger-color);" onclick="clearProjectFocus()">✕ 해제</span>`;
+                    html += ` <span style="color:#2dd4bf; margin-left:6px; font-weight:bold;">[🎯 집중뷰: ${pTask.name}]</span> <span class="trail-link" style="color:var(--danger-color);" onclick="clearProjectFocus()">✕ 해제</span>`;
                 }
             }
             container.innerHTML = html;
         }
 
-        function clearProjectFocus() {
-            state.projectFocusId = null;
-            saveData(); renderAll();
-        }
-
+        function clearProjectFocus() { state.projectFocusId = null; saveData(); renderAll(); }
         function changeView(mode, m = 0, w = 0, d = 0) {
             state.viewMode = mode; state.focusMonth = m; state.focusWeek = w; state.focusDay = d;
             state.cellWidth = (mode === 'DAY') ? 45 : 65;
@@ -272,9 +269,7 @@
 
         function getActiveTimeRange() {
             if (state.viewMode === 'ALL') return { start: 0, end: 365, step: 'MONTH' };
-            if (state.viewMode === 'MONTH') {
-                return { start: MONTH_STARTS[state.focusMonth], end: MONTH_STARTS[state.focusMonth] + MONTH_DAYS[state.focusMonth], step: 'DAY' };
-            }
+            if (state.viewMode === 'MONTH') return { start: MONTH_STARTS[state.focusMonth], end: MONTH_STARTS[state.focusMonth] + MONTH_DAYS[state.focusMonth], step: 'DAY' };
             if (state.viewMode === 'WEEK') {
                 let weeks = getWeeksMapOfMonth(state.focusMonth);
                 let currentWeek = weeks[state.focusWeek];
@@ -288,115 +283,80 @@
         }
 
         function renderHeader() {
-            const wrapper = document.getElementById('master-render-header');
-            wrapper.innerHTML = '';
-
+            const wrapper = document.getElementById('master-render-header'); wrapper.innerHTML = '';
             const row1 = document.createElement('div'); row1.className = 'header-row';
             const row2 = document.createElement('div'); row2.className = 'header-row';
-
             const f1 = document.createElement('div'); f1.className = 'header-frozen-zone'; f1.innerText = "진행 단계 / 컷 목록";
             const f2 = document.createElement('div'); f2.className = 'header-frozen-zone'; f2.innerText = "2026년 실제 달력 스케일 연동";
             row1.appendChild(f1); row2.appendChild(f2);
-
             const g1 = document.createElement('div'); g1.className = 'header-grid-zone';
             const g2 = document.createElement('div'); g2.className = 'header-grid-zone';
 
             if (state.viewMode === 'ALL') {
                 for (let m = 0; m < 12; m++) {
                     let weeks = getWeeksMapOfMonth(m);
-                    const cell = document.createElement('div');
-                    cell.className = 'main-time-cell'; cell.style.width = `${state.cellWidth * weeks.length}px`;
-                    cell.innerText = `${m + 1}월`;
-                    cell.onclick = () => changeView('MONTH', m);
-                    g1.appendChild(cell);
-
+                    const cell = document.createElement('div'); cell.className = 'main-time-cell'; cell.style.width = `${state.cellWidth * weeks.length}px`;
+                    cell.innerText = `${m + 1}월`; cell.onclick = () => changeView('MONTH', m); g1.appendChild(cell);
                     weeks.forEach((wDays, wIdx) => {
-                        const sub = document.createElement('div'); sub.className = 'sub-tick-cell';
-                        sub.style.width = `${state.cellWidth}px`; sub.innerText = `${wIdx + 1}주`;
-                        sub.onclick = () => changeView('WEEK', m, wIdx);
-                        g2.appendChild(sub);
+                        const sub = document.createElement('div'); sub.className = 'sub-tick-cell'; sub.style.width = `${state.cellWidth}px`; sub.innerText = `${wIdx + 1}주`;
+                        sub.onclick = () => changeView('WEEK', m, wIdx); g2.appendChild(sub);
                     });
                 }
             } else if (state.viewMode === 'MONTH') {
-                const cell = document.createElement('div');
-                cell.className = 'main-time-cell'; cell.style.width = `${state.cellWidth * MONTH_DAYS[state.focusMonth]}px`;
-                cell.innerText = `${state.focusMonth + 1}월 집중 스케일`;
-                cell.onclick = () => changeView('ALL');
-                g1.appendChild(cell);
-
+                const cell = document.createElement('div'); cell.className = 'main-time-cell'; cell.style.width = `${state.cellWidth * MONTH_DAYS[state.focusMonth]}px`;
+                cell.innerText = `${state.focusMonth + 1}월 집중 스케일`; cell.onclick = () => changeView('ALL'); g1.appendChild(cell);
                 let weeks = getWeeksMapOfMonth(state.focusMonth);
                 for (let d = 0; d < MONTH_DAYS[state.focusMonth]; d++) {
                     let absDay = MONTH_STARTS[state.focusMonth] + d;
-                    const sub = document.createElement('div'); sub.className = 'sub-tick-cell';
-                    sub.style.width = `${state.cellWidth}px`;
-                    let yoil = getDayOfWeekString(absDay);
-                    sub.innerHTML = `${d + 1}<span style="font-size:0.55rem;color:var(--text-muted);">(${yoil})</span>`;
-                    
-                    let wIdx = weeks.findIndex(w => w.includes(absDay));
-                    sub.onclick = () => changeView('WEEK', state.focusMonth, wIdx);
-                    g2.appendChild(sub);
+                    const sub = document.createElement('div'); sub.className = 'sub-tick-cell'; sub.style.width = `${state.cellWidth}px`;
+                    let yoil = getDayOfWeekString(absDay); sub.innerHTML = `${d + 1}<span style="font-size:0.55rem;color:var(--text-muted);">(${yoil})</span>`;
+                    let wIdx = weeks.findIndex(w => w.includes(absDay)); sub.onclick = () => changeView('WEEK', state.focusMonth, wIdx); g2.appendChild(sub);
                 }
             } else if (state.viewMode === 'WEEK') {
-                let weeks = getWeeksMapOfMonth(state.focusMonth);
-                let currentWeekDays = weeks[state.focusWeek];
-
-                const cell = document.createElement('div');
-                cell.className = 'main-time-cell'; cell.style.width = `${state.cellWidth * currentWeekDays.length}px`;
-                cell.innerText = `${state.focusMonth + 1}월 ${state.focusWeek + 1}주차 상세`;
-                cell.onclick = () => changeView('MONTH', state.focusMonth);
-                g1.appendChild(cell);
-
+                let weeks = getWeeksMapOfMonth(state.focusMonth); let currentWeekDays = weeks[state.focusWeek];
+                const cell = document.createElement('div'); cell.className = 'main-time-cell'; cell.style.width = `${state.cellWidth * currentWeekDays.length}px`;
+                cell.innerText = `${state.focusMonth + 1}월 ${state.focusWeek + 1}주차 상세`; cell.onclick = () => changeView('MONTH', state.focusMonth); g1.appendChild(cell);
                 currentWeekDays.forEach((absDay, dIdx) => {
-                    const sub = document.createElement('div'); sub.className = 'sub-tick-cell';
-                    sub.style.width = `${state.cellWidth}px`;
-                    let dateNum = absDay - MONTH_STARTS[state.focusMonth] + 1;
-                    let yoil = getDayOfWeekString(absDay);
+                    const sub = document.createElement('div'); sub.className = 'sub-tick-cell'; sub.style.width = `${state.cellWidth}px`;
+                    let dateNum = absDay - MONTH_STARTS[state.focusMonth] + 1; let yoil = getDayOfWeekString(absDay);
                     sub.innerHTML = `${dateNum}일<span style="font-size:0.55rem;color:var(--text-muted);">(${yoil})</span>`;
-                    sub.onclick = () => changeView('DAY', state.focusMonth, state.focusWeek, dIdx);
-                    g2.appendChild(sub);
+                    sub.onclick = () => changeView('DAY', state.focusMonth, state.focusWeek, dIdx); g2.appendChild(sub);
                 });
-            } else if (state.viewMode === 'DAY') {
-                for(let h=0; h<24; h++) {
-                    const cell = document.createElement('div');
-                    cell.className = 'main-time-cell'; cell.style.width = `${state.cellWidth * 12}px`;
-                    cell.innerText = `${h}시`;
-                    g1.appendChild(cell);
-
-                    for(let m=0; m<12; m++) {
-                        const sub = document.createElement('div'); sub.className = 'sub-tick-cell';
-                        sub.style.width = `${state.cellWidth}px`; sub.innerText = `${String(m*5).padStart(2, '0')}`;
-                        g2.appendChild(sub);
-                    }
-                }
             }
-
-            row1.appendChild(g1); row2.appendChild(g2);
-            wrapper.appendChild(row1); wrapper.appendChild(row2);
+            row1.appendChild(g1); row2.appendChild(g2); wrapper.appendChild(row1); wrapper.appendChild(row2);
         }
 
-        // 🛠️ 대대적 알고리즘 튜닝: 형제 항목들 전체 집합의 '순수 공백(Timeline Union Complement)'을 역산하여 중복 완벽 제거
+        // 🛠️ 모든 하단 서브 자식 노드들을 전역 역산 수집하여 공백 검출하는 리커시브 수집 함수
+        function getAllDescendants(parentId) {
+            let descendants = [];
+            let children = state.tasks.filter(t => t.parentId === parentId);
+            children.forEach(c => {
+                descendants.push(c);
+                descendants = descendants.concat(getAllDescendants(c.id));
+            });
+            return descendants;
+        }
+
         function fillTimeGapsWithTasks() {
+            // 부모 자격을 가진 모든 항목 추출
             let parentIds = [...new Set(state.tasks.map(t => t.parentId).filter(p => p !== null))];
             let createdAny = false;
 
-            // 순수 갭 자동 생성 항목 초기화 (텍스트를 직접 편집해서 사용 중인 항목은 보존)
+            // 순수 시스템 여백 제거 (편집되지 않은 기본 상태 노드 대상)
             state.tasks = state.tasks.filter(t => !t.id.startsWith('auto-gap-') || t.name !== '휴식 및 정비');
 
             parentIds.forEach(pId => {
                 let parent = state.tasks.find(t => t.id === pId);
                 if (!parent) return;
 
-                // 해당 부모 아래 소속된 모든 커스텀 자식 항목들 수집
-                let children = state.tasks.filter(t => t.parentId === pId && t.color !== 'auto-gap-emerald');
-                
-                // 시간축 타임 라인 맵 배열 생성 (부모의 스케일 길이만큼 크기 할당)
+                // 🛠️ 버그 타파 핵심: 하위 리커시브 뎁스에 포함된 모든 손자/증손자 항목의 시간대까지 전부 수집
+                let allSubItems = getAllDescendants(pId).filter(t => t.color !== 'auto-gap-emerald');
                 let parentDuration = parent.end - parent.start;
                 if (parentDuration <= 0) return;
 
                 let occupied = new Array(parentDuration).fill(false);
 
-                // 자식들이 점유한 영역을 타임 블록 맵에 꼼꼼히 기록
-                children.forEach(c => {
+                allSubItems.forEach(c => {
                     let relStart = Math.max(0, c.start - parent.start);
                     let relEnd = Math.min(parentDuration, c.end - parent.start);
                     for (let i = relStart; i < relEnd; i++) {
@@ -404,37 +364,28 @@
                     }
                 });
 
-                // 점유되지 않은 연속된 공백(여백) 구간 검출 스캐너 구동
-                let inGap = false;
-                let gapStart = 0;
-
+                let inGap = false; let gapStart = 0;
                 for (let i = 0; i <= parentDuration; i++) {
                     let isVacant = (i < parentDuration) ? !occupied[i] : false;
-
                     if (!inGap && isVacant) {
-                        inGap = true;
-                        gapStart = i;
+                        inGap = true; gapStart = i;
                     } else if (inGap && !isVacant) {
                         inGap = false;
                         let absStart = parent.start + gapStart;
                         let absEnd = parent.start + i;
-
                         if (absStart < absEnd) {
                             state.tasks.push({
                                 id: "auto-gap-" + Date.now() + "-" + Math.random(),
                                 parentId: pId,
                                 name: "휴식 및 정비",
-                                start: absStart,
-                                end: absEnd,
-                                color: "auto-gap-emerald",
-                                checked: false
+                                start: absStart, end: absEnd,
+                                color: "auto-gap-emerald", checked: false
                             });
                             createdAny = true;
                         }
                     }
                 }
             });
-
             if (createdAny) saveData();
         }
 
@@ -450,6 +401,7 @@
             return false;
         }
 
+        // 🛠️ 프로젝트 집중뷰 필터링 스캔 규칙 커스텀 변경 (선택 항목 자신 및 그 하부 트리 구조만 통과)
         function isFilteredByProjectFocus(task) {
             if (!state.projectFocusId) return false;
             if (task.id === state.projectFocusId) return false;
@@ -466,7 +418,6 @@
             if (!parentId) return;
             let parent = state.tasks.find(t => t.id === parentId);
             if (!parent) return;
-
             let children = state.tasks.filter(t => t.parentId === parentId);
             if (children.length > 0) {
                 parent.start = Math.min(...children.map(c => c.start));
@@ -478,94 +429,121 @@
         function moveAllChildrenSet(parentId, delta) {
             let children = state.tasks.filter(t => t.parentId === parentId);
             children.forEach(c => {
-                c.start += delta;
-                c.end += delta;
+                c.start += delta; c.end += delta;
                 moveAllChildrenSet(c.id, delta); 
             });
         }
 
-        // 🛠️ 상하위 계층 이동 모듈용 트리 구조 변경 핸들러
-        function changeTaskParent(taskId, newParentId) {
-            let task = state.tasks.find(t => t.id === taskId);
-            if (!task) return;
+        // 🛠️ 구조 이동용 드래그앤드롭 플래그 상태 저장소 및 핸들러 시스템 구동
+        let rowDragSourceId = null;
 
-            let oldParentId = task.parentId;
-
-            if (newParentId === "NONE") {
-                task.parentId = null;
-            } else {
-                // 순환 참조(자식을 자기 부모로 선택하는 현상) 방지 코드 가드
-                let p = state.tasks.find(t => t.id === newParentId);
-                let cyclical = false;
-                while (p) {
-                    if (p.id === taskId) { cyclical = true; break; }
-                    p = state.tasks.find(t => t.id === p.parentId);
-                }
-                if (!cyclical) task.parentId = newParentId;
-            }
-
-            // 부모 구조가 바뀐 항목의 색상이 'auto-gap-emerald'라면 일반 업무 컬러로 강제 변환
-            if (task.color === 'auto-gap-emerald') {
-                task.color = PALETTE[0];
-            }
-
-            updateParentTimeChain(oldParentId);
-            updateParentTimeChain(task.parentId);
-            fillTimeGapsWithTasks();
-            saveData(); renderAll();
+        function onRowDragStart(e, id) {
+            rowDragSourceId = id;
+            e.dataTransfer.effectAllowed = "move";
         }
 
-        // 🛠️ 간편 간결 원터치 항목 복제 기능
+        function onRowDragOver(e, targetId) {
+            e.preventDefault();
+            if (rowDragSourceId === targetId) return;
+            document.getElementById(`row-node-${targetId}`)?.classList.add('drag-over-active');
+        }
+
+        function onRowDragLeave(targetId) {
+            document.getElementById(`row-node-${targetId}`)?.classList.remove('drag-over-active');
+        }
+
+        function onRowDrop(e, targetId) {
+            e.preventDefault();
+            document.getElementById(`row-node-${targetId}`)?.classList.remove('drag-over-active');
+            if (!rowDragSourceId || rowDragSourceId === targetId) return;
+
+            let sourceTask = state.tasks.find(t => t.id === rowDragSourceId);
+            if (!sourceTask) return;
+
+            let oldParentId = sourceTask.parentId;
+
+            // 순환 참조 방지 가드 레일
+            let p = state.tasks.find(t => t.id === targetId);
+            let cyclical = false;
+            while (p) {
+                if (p.id === rowDragSourceId) { cyclical = true; break; }
+                p = state.tasks.find(t => t.id === p.parentId);
+            }
+
+            if (!cyclical) {
+                sourceTask.parentId = targetId;
+                if (sourceTask.color === 'auto-gap-emerald') sourceTask.color = PALETTE[0];
+                
+                updateParentTimeChain(oldParentId);
+                updateParentTimeChain(targetId);
+                fillTimeGapsWithTasks();
+                saveData(); renderAll();
+            }
+            rowDragSourceId = null;
+        }
+
         function duplicateTask(taskId) {
-            let src = state.tasks.find(t => t.id === taskId);
-            if (!src) return;
-
+            let src = state.tasks.find(t => t.id === taskId); if (!src) return;
             let newId = "p_" + Date.now() + "_" + Math.floor(Math.random()*1000);
-            let dup = {
-                id: newId,
-                parentId: src.parentId,
-                name: src.name + " (복사본)",
-                start: src.start,
-                end: src.end,
-                color: src.color === 'auto-gap-emerald' ? PALETTE[0] : src.color,
-                checked: false
-            };
-
-            state.tasks.push(dup);
-            updateParentTimeChain(src.parentId);
-            fillTimeGapsWithTasks();
-            saveData(); renderAll();
+            state.tasks.push({
+                id: newId, parentId: src.parentId, name: src.name + " (복사본)",
+                start: src.start, end: src.end, color: src.color === 'auto-gap-emerald' ? PALETTE[0] : src.color, checked: false
+            });
+            updateParentTimeChain(src.parentId); fillTimeGapsWithTasks(); saveData(); renderAll();
         }
 
         function renderRows() {
-            const container = document.getElementById('dynamic-rows-container');
-            container.innerHTML = '';
-
+            const container = document.getElementById('dynamic-rows-container'); container.innerHTML = '';
             let timeConfig = getActiveTimeRange();
-            let totalVisibleUnits = (state.viewMode === 'ALL') ? 52 : (timeConfig.end - timeConfig.start); 
-            if (state.viewMode === 'DAY') totalVisibleUnits = 288;
+            let totalVisibleUnits = (state.viewMode === 'ALL') ? 52 : (timeConfig.end - timeConfig.start);
 
             let sortedTasks = [...state.tasks].sort((a, b) => a.start - b.start);
             let treeSorted = [];
             function buildTree(pId) {
-                sortedTasks.filter(t => t.parentId === pId).forEach(t => {
-                    treeSorted.push(t); buildTree(t.id);
-                });
+                sortedTasks.filter(t => t.parentId === pId).forEach(t => { treeSorted.push(t); buildTree(t.id); });
             }
             buildTree(null);
 
-            // 최상위 및 그룹 항목들 목록 추출 (드롭다운 바인딩용 세트)
-            let potentialParents = state.tasks.filter(t => t.color !== 'auto-gap-emerald');
+            // 만약 특정 프로젝트 집중뷰 모드라면 정렬 트리를 집중 대상을 루트로 새로 구성
+            if (state.projectFocusId) {
+                treeSorted = [];
+                let rootFocus = state.tasks.find(t => t.id === state.projectFocusId);
+                if (rootFocus) {
+                    treeSorted.push(rootFocus);
+                    function buildSubTree(pId) {
+                        sortedTasks.filter(t => t.parentId === pId).forEach(t => { treeSorted.push(t); buildSubTree(t.id); });
+                    }
+                    buildSubTree(state.projectFocusId);
+                }
+            }
 
             treeSorted.forEach(task => {
-                if (isAncestorCollapsed(task) || isFilteredByProjectFocus(task)) return;
+                if (isAncestorCollapsed(task) || (state.projectFocusId && isFilteredByProjectFocus(task))) return;
 
                 let isParentNode = state.tasks.some(t => t.parentId === task.id);
                 const row = document.createElement('div');
                 row.className = `task-row ${task.checked ? 'completed-shading' : ''}`;
+                row.id = `row-node-${task.id}`;
+
+                // 🛠️ 가로 세줄 드래그 타겟 드롭 존 바인딩 설정부
+                row.ondragover = (e) => onRowDragOver(e, task.id);
+                row.ondragleave = () => onRowDragLeave(task.id);
+                row.ondrop = (e) => onRowDrop(e, task.id);
 
                 const left = document.createElement('div'); left.className = 'task-left-panel';
+
+                // 🛠️ 핸들 추가 파트
+                const grabHandle = document.createElement('div'); grabHandle.className = 'row-grab-handle';
+                grabHandle.innerText = "☰"; grabHandle.draggable = true;
+                grabHandle.ondragstart = (e) => onRowDragStart(e, task.id);
+                left.appendChild(grabHandle);
+
                 let depth = getDepth(task);
+                // 프로젝트 집중뷰 상태면 최상위 왕으로 변하므로 들여쓰기 뎁스를 임시 보정 처리
+                if (state.projectFocusId) {
+                    let rootDepth = getDepth(state.tasks.find(t => t.id === state.projectFocusId));
+                    depth = Math.max(0, depth - rootDepth);
+                }
                 for(let d=0; d<depth; d++) {
                     let space = document.createElement('span'); space.className = 'indent-space'; left.appendChild(space);
                 }
@@ -583,15 +561,13 @@
                 }
 
                 const cb = document.createElement('input'); cb.type = 'checkbox'; cb.className = 'task-checkbox';
-                cb.checked = task.checked;
-                cb.onchange = () => { task.checked = cb.checked; saveData(); renderAll(); };
+                cb.checked = task.checked; cb.onchange = () => { task.checked = cb.checked; saveData(); renderAll(); };
                 left.appendChild(cb);
 
                 const pal = document.createElement('div'); pal.className = 'color-dot-palette';
                 PALETTE.forEach(c => {
                     const dot = document.createElement('div'); dot.className = 'color-dot'; dot.style.backgroundColor = c;
-                    dot.onclick = () => { task.color = c; saveData(); renderRows(); };
-                    pal.appendChild(dot);
+                    dot.onclick = () => { task.color = c; saveData(); renderRows(); }; pal.appendChild(dot);
                 });
                 left.appendChild(pal);
 
@@ -601,104 +577,58 @@
                 nameInput.onblur = () => { nameInput.value = state.inputBackups[task.id]; };
                 nameInput.onkeydown = (e) => {
                     if (e.key === 'Enter') {
-                        state.inputBackups[task.id] = nameInput.value;
-                        task.name = nameInput.value; 
-                        
-                        // 만약 자동 생성 여백 항목의 텍스트를 고쳤다면 실제 일반 개별 태스크 처리 격상 유도
-                        if (task.id.startsWith('auto-gap-')) {
-                            task.color = PALETTE[0]; 
-                        }
-                        
+                        state.inputBackups[task.id] = nameInput.value; task.name = nameInput.value; 
+                        if (task.id.startsWith('auto-gap-')) task.color = PALETTE[0];
                         nameInput.blur(); fillTimeGapsWithTasks(); saveData(); renderAll();
-                    } else if (e.key === 'Escape') {
-                        nameInput.value = state.inputBackups[task.id]; nameInput.blur();
-                    }
+                    } else if (e.key === 'Escape') { nameInput.value = state.inputBackups[task.id]; nameInput.blur(); }
                 };
                 left.appendChild(nameInput);
 
-                // 🛠️ 상하위 이동용 드롭다운 구조 UI 배치 구현부
-                const sel = document.createElement('select'); sel.className = 'parent-selector';
-                sel.innerHTML = `<option value="NONE">최상위</option>`;
-                potentialParents.forEach(p => {
-                    if (p.id !== task.id) {
-                        let selectedAttr = (task.parentId === p.id) ? 'selected' : '';
-                        sel.innerHTML += `<option value="${p.id}" ${selectedAttr}>포함: ${p.name.substring(0,6)}...</option>`;
-                    }
-                });
-                sel.onchange = (e) => { changeTaskParent(task.id, e.target.value); };
-                left.appendChild(sel);
-
-                // 🛠️ 간편 원터치 복제 버튼 주입 구현부
                 const dupBtn = document.createElement('button'); dupBtn.style.padding = '3px 5px'; dupBtn.style.fontSize = '0.7rem'; dupBtn.style.backgroundColor = '#4b5563'; dupBtn.innerText = "📋";
-                dupBtn.title = "이 항목 간편 복제";
-                dupBtn.onclick = () => { duplicateTask(task.id); };
-                left.appendChild(dupBtn);
+                dupBtn.onclick = () => duplicateTask(task.id); left.appendChild(dupBtn);
 
                 const subAddBtn = document.createElement('button'); subAddBtn.style.padding = '3px 5px'; subAddBtn.style.fontSize = '0.7rem'; subAddBtn.innerText = "➕";
-                subAddBtn.onclick = () => { addChildRow(task.id); };
-                left.appendChild(subAddBtn);
+                subAddBtn.onclick = () => { addChildRow(task.id); }; left.appendChild(subAddBtn);
 
                 const delBtn = document.createElement('button'); delBtn.className = 'danger'; delBtn.style.padding = '3px 5px'; delBtn.innerText = "✕";
                 delBtn.onclick = () => { 
-                    let pId = task.parentId;
-                    state.tasks = state.tasks.filter(t => t.id !== task.id); 
-                    if(pId) updateParentTimeChain(pId);
-                    fillTimeGapsWithTasks(); saveData(); renderAll(); 
+                    let pId = task.parentId; state.tasks = state.tasks.filter(t => t.id !== task.id); 
+                    if(pId) updateParentTimeChain(pId); fillTimeGapsWithTasks(); saveData(); renderAll(); 
                 };
                 left.appendChild(delBtn);
-
                 row.appendChild(left);
 
                 const rightTrack = document.createElement('div'); rightTrack.className = 'task-right-track';
                 rightTrack.style.width = `${totalVisibleUnits * state.cellWidth}px`;
-
                 for (let i = 0; i < totalVisibleUnits; i++) {
                     const unit = document.createElement('div'); unit.className = 'track-grid-unit'; unit.style.width = `${state.cellWidth}px`;
                     rightTrack.appendChild(unit);
                 }
 
-                let barRenderable = false;
-                let renderLeftCell = 0;
-                let renderWidthCells = 0;
-                let unitText = "";
+                let barRenderable = false; let renderLeftCell = 0; let renderWidthCells = 0; let unitText = "";
 
                 if (state.viewMode === 'ALL') {
                     let totalYearWeeks = 52; 
                     let sWeek = Math.floor((task.start / 365) * totalYearWeeks);
                     let eWeek = Math.ceil((task.end / 365) * totalYearWeeks);
                     if (sWeek < totalYearWeeks && eWeek > 0) {
-                        barRenderable = true;
-                        renderLeftCell = Math.max(0, sWeek);
+                        barRenderable = true; renderLeftCell = Math.max(0, sWeek);
                         renderWidthCells = Math.min(totalYearWeeks, eWeek) - renderLeftCell;
                         unitText = `${Math.ceil((task.end - task.start)/7)}주간`;
                     }
-                } else if (state.viewMode === 'MONTH' || state.viewMode === 'WEEK') {
+                } else {
                     let oStart = Math.max(timeConfig.start, task.start);
                     let oEnd = Math.min(timeConfig.end, task.end);
                     if (oStart < oEnd) {
-                        barRenderable = true;
-                        renderLeftCell = oStart - timeConfig.start;
-                        renderWidthCells = oEnd - oStart;
-                        unitText = `${task.end - task.start}일간`;
-                    }
-                } else if (state.viewMode === 'DAY') {
-                    if (task.start <= timeConfig.start && task.end > timeConfig.start) {
-                        barRenderable = true;
-                        renderLeftCell = 0;
-                        renderWidthCells = 288;
-                        unitText = "하루 종일";
+                        barRenderable = true; renderLeftCell = oStart - timeConfig.start;
+                        renderWidthCells = oEnd - oStart; unitText = `${task.end - task.start}일간`;
                     }
                 }
 
                 if (barRenderable && renderWidthCells > 0) {
-                    const bar = document.createElement('div'); 
-                    bar.className = 'time-bar-element';
-                    
-                    if (task.color === 'auto-gap-emerald') {
-                        bar.classList.add('auto-gap-bar');
-                    } else {
-                        bar.style.backgroundColor = task.color || '#3b82f6';
-                    }
+                    const bar = document.createElement('div'); bar.className = 'time-bar-element';
+                    if (task.color === 'auto-gap-emerald') bar.classList.add('auto-gap-bar');
+                    else bar.style.backgroundColor = task.color || '#3b82f6';
 
                     bar.style.left = `${renderLeftCell * state.cellWidth}px`;
                     bar.style.width = `${renderWidthCells * state.cellWidth}px`;
@@ -707,18 +637,20 @@
                     const lbl = document.createElement('div'); lbl.className = 'bar-label';
                     lbl.innerHTML = `<span>⏳ ${task.name} (${unitText})</span>`;
                     
-                    // 🛠️ 충돌 방지 가드가 적용된 정밀 프로젝트 집중뷰 트리거 시스템
-                    let clickMoveGuard = false;
+                    // 🛠️ 순수 클릭 및 드래그 분리형 가드 시스템 고도화 (클릭 유실 및 마우스 따라옴 방지)
+                    let isMovingGuard = false;
                     lbl.onmousedown = (e) => {
-                        clickMoveGuard = false;
+                        if (e.buttons !== 1) return;
+                        e.stopPropagation();
+                        isMovingGuard = false;
+                        startDrag(task.id, 'move', e.clientX);
                     };
-                    lbl.onmousemove = () => {
-                        clickMoveGuard = true; // 드래그 중일 땐 집중뷰 이벤트 발동안함
-                    };
+                    lbl.onmousemove = () => { isMovingGuard = true; };
                     lbl.onmouseup = (e) => {
                         e.stopPropagation();
-                        if (!clickMoveGuard && isParentNode) {
-                            state.projectFocusId = task.id;
+                        if (!isMovingGuard) {
+                            // 🛠️ 인디케이터 바 라벨 클릭 시 대전환 정상화 트리거
+                            state.projectFocusId = (state.projectFocusId === task.id) ? null : task.id;
                             saveData(); renderAll();
                         }
                     };
@@ -729,18 +661,12 @@
                         bar.appendChild(hL); bar.appendChild(lbl); bar.appendChild(hR);
                         hL.onmousedown = (e) => { e.stopPropagation(); startDrag(task.id, 'left', e.clientX); };
                         hR.onmousedown = (e) => { e.stopPropagation(); startDrag(task.id, 'right', e.clientX); };
-                        lbl.onmousedown = (e) => { e.stopPropagation(); if (e.buttons === 1) startDrag(task.id, 'move', e.clientX); };
                     } else {
-                        bar.appendChild(lbl);
-                        lbl.style.cursor = 'move';
-                        lbl.onmousedown = (e) => { e.stopPropagation(); if (e.buttons === 1) startDrag(task.id, 'move', e.clientX); };
+                        bar.appendChild(lbl); lbl.style.cursor = 'move';
                     }
-
                     rightTrack.appendChild(bar);
                 }
-
-                row.appendChild(rightTrack);
-                container.appendChild(row);
+                row.appendChild(rightTrack); container.appendChild(row);
             });
         }
 
@@ -753,8 +679,9 @@
             dragStartS = task.start; dragStartE = task.end;
             originalTasksState = JSON.parse(JSON.stringify(state.tasks));
             
-            document.addEventListener('mousemove', onDragMove);
-            document.addEventListener('mouseup', endDrag);
+            // 🛠️ 브라우저 이탈 유실에 대비하여 전역 window 리스너 바인딩 안전 가드 레이어 확대
+            window.addEventListener('mousemove', onDragMove);
+            window.addEventListener('mouseup', endDrag);
         }
 
         function onDragMove(e) {
@@ -762,110 +689,60 @@
             let deltaX = e.clientX - dragStartX;
             let cellDelta = Math.round(deltaX / state.cellWidth);
 
-            if (state.viewMode === 'ALL') {
-                cellDelta = Math.round(cellDelta * (365 / 52));
-            }
+            if (state.viewMode === 'ALL') cellDelta = Math.round(cellDelta * (365 / 52));
 
             state.tasks = JSON.parse(JSON.stringify(originalTasksState));
             let task = state.tasks.find(t => t.id === currentDragId);
 
             if (dragType === 'move') {
-                let ns = dragStartS + cellDelta;
-                let ne = dragStartE + cellDelta;
-                if (ns >= 0 && ne <= 365) { 
-                    task.start = ns; 
-                    task.end = ne; 
-                    moveAllChildrenSet(task.id, cellDelta);
-                }
+                let ns = dragStartS + cellDelta; let ne = dragStartE + cellDelta;
+                if (ns >= 0 && ne <= 365) { task.start = ns; task.end = ne; moveAllChildrenSet(task.id, cellDelta); }
             } else if (dragType === 'left') {
-                let ns = dragStartS + cellDelta;
-                if (ns >= 0 && ns < task.end) task.start = ns;
+                let ns = dragStartS + cellDelta; if (ns >= 0 && ns < task.end) task.start = ns;
             } else if (dragType === 'right') {
-                let ne = dragStartE + cellDelta;
-                if (ne > task.start && ne <= 365) task.end = ne;
+                let ne = dragStartE + cellDelta; if (ne > task.start && ne <= 365) task.end = ne;
             }
-
-            updateParentTimeChain(task.parentId);
-            renderRows();
+            updateParentTimeChain(task.parentId); renderRows();
         }
 
         function endDrag() {
             currentDragId = null;
-            document.removeEventListener('mousemove', onDragMove);
-            document.removeEventListener('mouseup', endDrag);
-            
-            fillTimeGapsWithTasks();
-            saveData();
-            renderAll(); 
+            window.removeEventListener('mousemove', onDragMove);
+            window.removeEventListener('mouseup', endDrag);
+            fillTimeGapsWithTasks(); saveData(); renderAll(); 
         }
 
         function addNewRow() {
-            state.tasks.push({
-                id: "p_" + Date.now(), parentId: null,
-                name: "새로운 최상위 마스터 공정", start: 0, end: 45,
-                color: "#3b82f6", checked: false
-            });
+            state.tasks.push({ id: "p_" + Date.now(), parentId: null, name: "새로운 최상위 마스터 공정", start: 0, end: 45, color: "#3b82f6", checked: false });
             fillTimeGapsWithTasks(); saveData(); renderAll();
         }
 
         function addChildRow(pId) {
             let p = state.tasks.find(t => t.id === pId);
-            
-            // 🛠️ 색상 팔레트 순서대로 자동 로테이션 분배
-            let assignedColor = PALETTE[state.colorPointer % PALETTE.length];
-            state.colorPointer++;
-
+            let assignedColor = PALETTE[state.colorPointer % PALETTE.length]; state.colorPointer++;
             state.tasks.push({
-                id: "p_" + Date.now(), parentId: pId,
-                name: "└ 세부 서브 태스크 라인", start: p.start, end: Math.min(p.end, p.start + 15),
-                color: assignedColor, checked: false
+                id: "p_" + Date.now(), parentId: pId, name: "└ 세부 서브 태스크 라인", start: p.start, end: Math.min(p.end, p.start + 15), color: assignedColor, checked: false
             });
-            state.collapsedNodes[pId] = false;
-            updateParentTimeChain(pId);
-            fillTimeGapsWithTasks(); saveData(); renderAll();
+            state.collapsedNodes[pId] = false; updateParentTimeChain(pId); fillTimeGapsWithTasks(); saveData(); renderAll();
         }
 
         function renderArchive() {
-            const container = document.getElementById('archive-content-panel');
-            const badge = document.getElementById('archive-count-badge');
-            let completed = state.tasks.filter(t => t.checked);
-            badge.innerText = `${completed.length}개 완료됨`;
-
-            if (completed.length === 0) {
-                container.innerHTML = `<div style="text-align:center; color:var(--text-muted); padding:10px;">완료 보관함이 비어있습니다.</div>`;
-                return;
-            }
-
+            const container = document.getElementById('archive-content-panel'); const badge = document.getElementById('archive-count-badge');
+            let completed = state.tasks.filter(t => t.checked); badge.innerText = `${completed.length}개 완료됨`;
+            if (completed.length === 0) { container.innerHTML = `<div style="text-align:center; color:var(--text-muted); padding:10px;">완료 보관함이 비어있습니다.</div>`; return; }
             let html = '';
             completed.forEach(task => {
-                html += `
-                    <div class="archived-item">
-                        <div class="archive-top">
-                            <span>🟩 <strong>${task.name}</strong></span>
-                            <button class="secondary" style="padding:4px 8px; font-size:0.75rem;" onclick="restoreTask('${task.id}')">🔄 타임라인 복원</button>
-                        </div>
-                    </div>
-                `;
+                html += `<div class="archived-item"><div class="archive-top"><span>🟩 <strong>${task.name}</strong></span><button class="secondary" style="padding:4px 8px; font-size:0.75rem;" onclick="restoreTask('${task.id}')">🔄 타임라인 복원</button></div></div>`;
             });
             container.innerHTML = html;
         }
 
-        function restoreTask(id) {
-            let task = state.tasks.find(t => t.id === id);
-            if (task) { task.checked = false; saveData(); renderAll(); }
-        }
-
+        function restoreTask(id) { let task = state.tasks.find(t => t.id === id); if (task) { task.checked = false; saveData(); renderAll(); } }
         function toggleArchiveView() { document.getElementById('archive-content-panel').classList.toggle('open'); }
         function adjustZoom(amt) { state.cellWidth = Math.max(25, Math.min(200, state.cellWidth + amt)); renderAll(); }
         function resetAllData() { if (confirm("모든 데이터를 포맷팅하시겠습니까?")) { localStorage.clear(); location.reload(); } }
 
-        function renderAll() {
-            renderTrail();
-            renderHeader();
-            renderRows();
-            renderArchive();
-        }
-
+        function renderAll() { renderTrail(); renderHeader(); renderRows(); renderArchive(); }
         window.onload = init;
     </script>
 </body>
