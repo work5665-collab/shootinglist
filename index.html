@@ -137,7 +137,6 @@
             width: max-content;
         }
 
-        /* 2줄 레이어 헤더 구조 */
         .table-header {
             display: flex;
             flex-direction: column;
@@ -180,7 +179,6 @@
         }
         .grid-header-cell:hover { background: var(--primary-color); }
 
-        /* 행 스타일 */
         .task-row {
             display: flex;
             border-bottom: 1px solid var(--border-color);
@@ -218,7 +216,6 @@
         .task-right-track { position: relative; display: flex; background: #0f172a; }
         .track-grid-unit { border-right: 1px dashed rgba(51, 65, 85, 0.2); height: 50px; }
 
-        /* 인디케이터 바 디자인 */
         .time-bar-element {
             position: absolute;
             height: 30px;
@@ -273,7 +270,6 @@
 
     <div class="settings-bar">
         <div class="flex-group">
-            <!-- ⬅️ 네비게이션 상위 백 버튼 장착 -->
             <button id="back-view-btn" class="secondary" onclick="navigateUpView()" style="display: none;">⬅️ 이전 단계로 (상위 뷰)</button>
             <span id="current-view-indicator" style="font-weight: bold; color: var(--accent-color);">상태: 연도별 마스터 뷰</span>
         </div>
@@ -295,22 +291,19 @@
     </div>
 
     <script>
-        // 타임라인 계층 데이터 모델 기어
         let projectTasks = [
             { id: "p1", name: "2026년 콘텐츠 제작 기획 및 슈팅", start: 0, end: 12, parentId: null, open: true },
             { id: "c1", name: "상반기 프리-프로덕션 세팅", start: 0, end: 4, parentId: "p1", open: true },
             { id: "c2", name: "하반기 메인 프로덕션 크랭크인", start: 6, end: 11, parentId: "p1", open: true }
         ];
 
-        // 계층 뷰 제어 앵커 정보
-        let currentView = 'year'; // year, month, day
+        let currentView = 'year'; 
         let currentYear = 2026;
-        let currentMonth = 0; // 0-indexed (1월)
+        let currentMonth = 0; 
         
         let cellWidth = 70;
         let totalCells = 12;
 
-        // 드래그 상태 캐시 핸들
         let currentDragBarId = null;
         let dragType = null; 
         let dragStartX = 0;
@@ -345,29 +338,25 @@
             else { input.disabled = true; btn.innerText = "🔒 수정"; saveData(); }
         }
 
-        // 🔄 실제 달력 기준 주차 및 날짜 가변 칸수 연산 기어
         function updateViewConfig() {
             const backBtn = document.getElementById('back-view-btn');
             const indicator = document.getElementById('current-view-indicator');
 
             if (currentView === 'year') {
-                totalCells = 12; // 12개월 고정
+                totalCells = 12; 
                 backBtn.style.display = 'none';
                 indicator.innerText = `📅 탐색 범위: ${currentYear}년 마스터 계획`;
             } else if (currentView === 'month') {
-                // 해당 월이 몇 주차까지 있는지 실제 달력 연산 (4주~6주 유동적 반영)
                 totalCells = getWeeksInMonth(currentYear, currentMonth);
                 backBtn.style.display = 'inline-flex';
                 indicator.innerText = `📅 탐색 범위: ${currentYear}년 ➡️ ${currentMonth + 1}월 세부 계획 (${totalCells}주차 규격)`;
             } else if (currentView === 'day') {
-                // 해당 월의 실제 총 일수 계산 (28일 ~ 31일)
                 totalCells = new Date(currentYear, currentMonth + 1, 0).getDate();
                 backBtn.style.display = 'inline-flex';
                 indicator.innerText = `📅 탐색 범위: ${currentMonth + 1}월 ➡️ 일별/요일별 정밀 스케줄`;
             }
         }
 
-        // 📅 달력 주차 계산 유틸리티 알고리즘
         function getWeeksInMonth(year, month) {
             const firstOfYear = new Date(year, month, 1);
             const lastOfYear = new Date(year, month + 1, 0);
@@ -391,7 +380,6 @@
             if(confirm("모든 데이터를 지우고 리셋할까요?")) { localStorage.clear(); location.reload(); }
         }
 
-        // 🎨 리얼 캘린더 매핑 2줄 헤더 렌더러
         function renderHeader() {
             const wrapper = document.getElementById('render-header-wrapper');
             wrapper.innerHTML = '';
@@ -433,7 +421,6 @@
                 titleCell.style.width = `${totalCells * cellWidth}px`; titleCell.innerText = `${currentMonth + 1}월 일별 요일 자동 매칭 뷰`;
                 g1.appendChild(titleCell);
 
-                // 🗓️ 요일 및 날짜 실시간 매칭 동적 생성
                 for (let i = 1; i <= totalCells; i++) {
                     const cell = document.createElement('div'); cell.className = 'grid-header-cell';
                     cell.style.width = `${cellWidth}px`;
@@ -441,8 +428,8 @@
                     const dayName = dayNames[dateObj.getDay()];
                     cell.innerText = `${i}(${dayName})`;
                     
-                    if(dateObj.getDay() === 0) cell.style.color = var(--danger-color); // 일요일 빨간색
-                    if(dateObj.getDay() === 6) cell.style.color = '#38bdf8'; // 토요일 파란색
+                    if(dateObj.getDay() === 0) cell.style.color = "var(--danger-color)"; 
+                    if(dateObj.getDay() === 6) cell.style.color = '#38bdf8'; 
                     
                     g2.appendChild(cell);
                 }
@@ -452,7 +439,6 @@
             wrapper.appendChild(row1); wrapper.appendChild(row2);
         }
 
-        // 🎨 계층 구조 및 상위 항목 내부 휴식 구간 빌더
         function renderRows() {
             const container = document.getElementById('dynamic-rows-container');
             container.innerHTML = '';
@@ -461,18 +447,15 @@
             const roots = projectTasks.filter(t => !t.parentId);
 
             roots.forEach(root => {
-                // 상위(부모) 노드 삽입
                 renderedList.push({ task: root, isBreak: false });
 
                 if (root.open) {
                     const children = projectTasks.filter(t => t.parentId === root.id);
                     children.sort((a, b) => a.start - b.start);
 
-                    // ☕ [요청 반영] 휴식 및 정비 구간이 상위 항목 내부 자식들 사이에 배치되도록 엔진 리빌딩
                     let currentMarker = root.start;
 
                     children.forEach(child => {
-                        // 자식 시작점 가드가 부모 범위보다 넓을 때 내부 공백 계산
                         if (child.start > currentMarker) {
                             renderedList.push({
                                 isBreak: true,
@@ -486,7 +469,6 @@
                         currentMarker = Math.max(currentMarker, child.end);
                     });
 
-                    // 마지막 자식 끝난 후 부모 끝점 사이에 남은 공간이 있다면 채움
                     if (currentMarker < root.end && children.length > 0) {
                         renderedList.push({
                             isBreak: true,
@@ -499,7 +481,6 @@
                 }
             });
 
-            // 데이터 돔 결합 드라이버
             renderedList.forEach(item => {
                 const row = document.createElement('div');
                 row.className = `task-row ${item.isBreak ? 'break-row' : ''}`;
@@ -543,7 +524,6 @@
                     row.appendChild(leftPanel);
                 }
 
-                // 타임라인 우측 트랙 배치
                 const rightTrack = document.createElement('div');
                 rightTrack.className = 'task-right-track';
                 rightTrack.style.width = `${totalCells * cellWidth}px`;
@@ -591,7 +571,6 @@
             });
         }
 
-        // 🏗️ 4. 정밀 인터랙티브 연동 가드 드래그 알고리즘
         function initDrag(id, type, clientX) {
             currentDragBarId = id;
             dragType = type;
@@ -626,7 +605,6 @@
                     task.start = ns;
                     task.end = ne;
 
-                    // 부모 이동 시 자식 한 세트로 동시 가치 이동
                     if (!task.parentId) {
                         childInitialOffsets.forEach(off => {
                             const child = projectTasks.find(t => t.id === off.id);
@@ -638,13 +616,11 @@
                     }
                 }
             } else {
-                // 🛑 [요청 반영] 크기 조절 시 자식 요소들의 한계 영역 밑으로 단축 불가능하도록 디펜스 락 전개
                 const children = projectTasks.filter(t => t.parentId === task.id);
                 let minAllowedStart = dragStartLeftCell + cellDelta;
                 let maxAllowedEnd = dragStartEndCell + cellDelta;
 
                 if (!task.parentId && children.length > 0) {
-                    // 자식들이 있는 부모인 경우 최소 한계선 확보
                     let absoluteMinStart = Math.min(...children.map(c => c.start));
                     let absoluteMaxEnd = Math.max(...children.map(c => c.end));
 
@@ -658,7 +634,6 @@
                         }
                     }
                 } else {
-                    // 자식이 없거나 일반 자식 단독 노드 조절 시 프리 핸들링
                     if (dragType === 'left') {
                         if (minAllowedStart >= 0 && minAllowedStart < task.end) task.start = minAllowedStart;
                     } else if (dragType === 'right') {
@@ -667,7 +642,6 @@
                 }
             }
 
-            // 자식 노드를 개별 수정했을 때 부모 폭이 밀려 올라가며 감싸 안아주는 오토 마운트 연동
             if (task.parentId) {
                 syncParentBoundsToFitChildren(task.parentId);
             }
@@ -692,7 +666,6 @@
             let minS = Math.min(...children.map(c => c.start));
             let maxE = Math.max(...children.map(c => c.end));
 
-            // 자식이 부모를 탈출하려 하면 부모의 그릇을 강제 확장시킴
             if (minS < parent.start) parent.start = minS;
             if (maxE > parent.end) parent.end = maxE;
         }
