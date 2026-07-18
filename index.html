@@ -2,47 +2,43 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>🎬 On-Set Tracker (촬영 마스터 플랜)</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎬 범용 프로젝트 마스터 플랜</title>
     <style>
         :root {
-            --primary-color: #4f46e5;
-            --primary-hover: #4338ca;
             --bg-color: #0f172a;
             --card-bg: #1e293b;
             --text-color: #f8fafc;
             --text-muted: #94a3b8;
             --border-color: #334155;
+            --primary-color: #4f46e5;
+            --primary-hover: #4338ca;
             --success-color: #10b981;
             --danger-color: #ef4444;
-            
-            /* 유닛별 지정 컬러들 */
-            --color-orange: linear-gradient(90deg, #f59e0b, #d97706);
-            --color-purple: linear-gradient(90deg, #a855f7, #7e22ce);
-            --color-blue: linear-gradient(90deg, #3b82f6, #1d4ed8);
-            --color-teal: linear-gradient(90deg, #14b8a6, #0f766e);
-            --color-red: linear-gradient(90deg, #f43f5e, #be123c);
+            --accent-color: #f59e0b;
         }
 
+        /* 기본 고딕체 스타일 적용 */
         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
+            font-family: "Pretendard", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
             user-select: none;
             -webkit-user-select: none;
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             background-color: var(--bg-color);
             color: var(--text-color);
             padding: 20px;
-            overflow-x: hidden;
             display: flex;
             flex-direction: column;
-            gap: 20px;
+            gap: 15px;
+            overflow-x: hidden;
         }
 
+        /* 헤더 섹션 */
         header {
             display: flex;
             justify-content: space-between;
@@ -53,84 +49,89 @@
             border: 1px solid var(--border-color);
         }
 
-        .header-title-area {
+        .title-container {
             display: flex;
-            flex-direction: column;
-            gap: 4px;
+            align-items: center;
+            gap: 10px;
         }
 
-        h1 {
-            font-size: 1.3rem;
+        .title-input {
+            background: transparent;
+            border: 1px solid transparent;
+            color: var(--text-color);
+            font-size: 1.4rem;
             font-weight: 700;
-            letter-spacing: -0.02em;
+            padding: 2px 8px;
+            border-radius: 6px;
+            width: 350px;
+        }
+        .title-input:not(:disabled) {
+            background: #0f172a;
+            border-color: var(--primary-color);
+        }
+
+        .lock-btn {
+            background: #334155;
+            border: none;
+            color: white;
+            padding: 6px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
         }
 
         .control-panel {
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 10px;
         }
 
-        button {
+        /* 공통 버튼 크기 규격 */
+        button, select {
             background-color: var(--primary-color);
             color: white;
             border: none;
-            padding: 10px 16px;
-            border-radius: 8px;
-            font-size: 0.9rem;
-            cursor: pointer;
+            padding: 8px 14px;
+            border-radius: 6px;
+            font-size: 0.85rem;
             font-weight: 600;
-            transition: all 0.2s ease;
+            cursor: pointer;
             display: inline-flex;
             align-items: center;
-            gap: 6px;
+            gap: 5px;
         }
-
-        button:hover {
-            background-color: var(--primary-hover);
-        }
-
-        button.secondary {
-            background-color: #475569;
-        }
-        button.secondary:hover {
-            background-color: #334155;
-        }
-
-        button.danger {
-            background-color: var(--danger-color);
-        }
-        button.danger:hover {
-            background-color: #dc2626;
-        }
-
-        .toggle-container {
-            display: flex;
-            background: #111827;
-            padding: 4px;
-            border-radius: 8px;
+        button:hover { background-color: var(--primary-hover); }
+        button.secondary { background-color: #475569; }
+        button.secondary:hover { background-color: #334155; }
+        button.danger { background-color: var(--danger-color); }
+        
+        select {
+            background-color: #1e293b;
             border: 1px solid var(--border-color);
         }
 
-        .toggle-btn {
-            background: transparent;
-            color: var(--text-muted);
-            padding: 6px 12px;
-            border: none;
-            border-radius: 6px;
-            font-size: 0.8rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
+        /* 글로벌 세팅 바 */
+        .settings-bar {
+            background: var(--card-bg);
+            padding: 12px 20px;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
         }
 
-        .toggle-btn.active {
-            background: var(--primary-color);
-            color: white;
+        .flex-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.9rem;
         }
 
-        /* 메인 타임라인 디자인 */
-        .timeline-container {
+        /* 타임라인 메인 보드 */
+        .timeline-board {
             background: var(--card-bg);
             border-radius: 12px;
             border: 1px solid var(--border-color);
@@ -139,7 +140,7 @@
             flex-direction: column;
         }
 
-        .timeline-scroll-area {
+        .timeline-container-scroll {
             overflow-x: auto;
             width: 100%;
         }
@@ -147,900 +148,720 @@
         .timeline-table {
             display: flex;
             flex-direction: column;
-            min-width: 1400px;
             position: relative;
+            width: max-content; /* 내부 폭에 따라 무한히 늘어남 */
         }
 
-        /* 이중 구조 헤더 (시간 + 분) */
+        /* 헤더 디자인 */
         .table-header {
             display: flex;
-            background-color: #111827;
+            background: #111827;
             border-bottom: 2px solid var(--border-color);
-            height: 65px;
-            flex-direction: column;
+            height: 45px;
         }
 
-        .header-top-row {
-            display: flex;
-            height: 35px;
-            border-bottom: 1px solid var(--border-color);
-        }
-
-        .header-bottom-row {
-            display: flex;
-            height: 30px;
-        }
-
-        .header-task-title {
-            width: 320px;
-            min-width: 320px;
-            padding: 0 15px;
+        .header-frozen-zone {
+            width: 400px;
+            min-width: 400px;
+            padding-left: 15px;
             display: flex;
             align-items: center;
-            border-right: 1px solid var(--border-color);
             font-weight: bold;
             font-size: 0.9rem;
-            color: var(--text-color);
-            background: #0f172a;
-        }
-
-        .time-slots-container {
-            display: flex;
-            width: 100%;
-        }
-
-        .time-slot-major {
-            flex: 12; /* 12칸(60분) 공간 확보 */
-            border-right: 2px solid #475569;
-            text-align: center;
-            font-size: 0.8rem;
-            font-weight: 700;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: #111827;
-            color: var(--text-color);
-        }
-
-        .time-slot-minor-container {
-            display: flex;
-            width: 100%;
-        }
-
-        .time-slot-minor {
-            flex: 1;
-            border-right: 1px dashed rgba(51, 65, 85, 0.4);
-            font-size: 0.65rem;
             color: var(--text-muted);
+            border-right: 2px solid var(--border-color);
+            background: #0f172a;
+            position: sticky;
+            left: 0;
+            z-index: 20;
+        }
+
+        .header-grid-zone {
+            display: flex;
+        }
+
+        .grid-header-cell {
+            border-right: 1px solid var(--border-color);
             display: flex;
             align-items: center;
             justify-content: center;
-            background: #0b0f19;
+            font-size: 0.8rem;
+            font-weight: bold;
+            color: var(--text-color);
+            background: #111827;
         }
 
-        .time-slot-minor:nth-child(12n) {
-            border-right: 2px solid #475569;
-        }
-
-        /* 행 (Row) 디자인 */
+        /* 행 데이터 디자인 */
         .task-row {
             display: flex;
             border-bottom: 1px solid var(--border-color);
             background: var(--card-bg);
             position: relative;
         }
+        .task-row.completed { opacity: 0.4; }
+        .task-row.dragging { opacity: 0.5; background: #334155; }
 
-        .task-row.completed {
-            opacity: 0.4;
-            background-color: #0f172a;
-        }
-
-        .task-row.auto-break {
-            background-color: rgba(245, 158, 11, 0.04);
-        }
-
-        /* 좌측 정보 영역 (320px 고정) */
-        .task-info {
-            width: 320px;
-            min-width: 320px;
-            padding: 10px 12px;
-            border-right: 1px solid var(--border-color);
+        /* 좌측 컨트롤 영역 (고정 스트리밍 마운트) */
+        .task-left-panel {
+            width: 400px;
+            min-width: 400px;
+            padding: 8px 12px;
+            border-right: 2px solid var(--border-color);
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
             background: #1e293b;
-            z-index: 10;
+            position: sticky;
+            left: 0;
+            z-index: 15;
         }
 
-        .task-info input[type="text"] {
+        .drag-handle {
+            cursor: grab;
+            color: var(--text-muted);
+            font-size: 1.1rem;
+            padding: 0 4px;
+        }
+
+        .toggle-arrow {
+            cursor: pointer;
+            width: 16px;
+            text-align: center;
+            color: var(--accent-color);
+            font-size: 0.8rem;
+        }
+
+        .task-name-input {
             background: transparent;
             border: 1px solid transparent;
             color: var(--text-color);
             font-size: 0.85rem;
-            width: 100%;
             font-weight: 500;
-            padding: 4px 6px;
+            flex: 1;
+            padding: 3px 5px;
             border-radius: 4px;
-            transition: all 0.2s;
+        }
+        .task-name-input:focus {
+            background: #0f172a;
+            border-color: var(--primary-color);
+            outline: none;
         }
 
-        .task-info input[type="text"]:focus {
-            outline: none;
-            border-color: var(--primary-color);
+        /* 수치 직접 입력란 */
+        .cell-range-inputs {
+            display: flex;
+            align-items: center;
+            gap: 3px;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+        .cell-range-inputs input {
+            width: 34px;
+            background: #0f172a;
+            border: 1px solid var(--border-color);
+            color: white;
+            text-align: center;
+            border-radius: 4px;
+            padding: 2px 0;
+        }
+
+        /* 타임라인 바 우측 그리드 메인 트랙 */
+        .task-right-track {
+            position: relative;
+            display: flex;
             background: #0f172a;
         }
 
-        .btn-check {
-            width: 24px;
-            height: 24px;
-            border-radius: 50%;
-            border: 2px solid #64748b;
-            background: transparent;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: transparent;
-            font-weight: bold;
-            font-size: 0.8rem;
-            transition: all 0.2s;
-            flex-shrink: 0;
-        }
-
-        .completed .btn-check {
-            background: var(--success-color);
-            border-color: var(--success-color);
-            color: white;
-        }
-
-        /* 유닛별 컬러 셀렉터 */
-        .color-picker {
-            display: flex;
-            gap: 4px;
-            flex-shrink: 0;
-        }
-
-        .color-dot {
-            width: 14px;
-            height: 14px;
-            border-radius: 50%;
-            cursor: pointer;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            transition: transform 0.2s;
-        }
-
-        .color-dot:hover {
-            transform: scale(1.2);
-        }
-
-        .color-dot.active {
-            border: 2px solid white;
-            box-shadow: 0 0 4px white;
-        }
-
-        /* 우측 그리드 영역 */
-        .timeline-grid {
-            display: grid;
-            grid-template-columns: repeat(120, 1fr);
-            width: 100%;
-            height: 60px;
-            position: relative;
-            background-color: #0f172a;
-        }
-
-        .grid-cell {
-            border-right: 1px dashed rgba(51, 65, 85, 0.4);
+        .track-grid-unit {
+            border-right: 1px dashed rgba(51, 65, 85, 0.3);
             height: 100%;
+            height: 52px;
         }
 
-        .grid-cell:nth-child(12n) {
-            border-right: 2px solid #475569;
-        }
-
-        /* 드래그 가능 컬러 타임 바 */
-        .time-bar {
+        /* 드래그 인디케이터 바 */
+        .time-bar-element {
             position: absolute;
-            height: 38px;
-            top: 11px;
-            border-radius: 8px;
+            height: 32px;
+            top: 10px;
+            background: linear-gradient(90deg, #f59e0b, #d97706);
+            border-radius: 6px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
             cursor: grab;
             touch-action: none;
-            z-index: 5;
-            transition: background 0.1s;
         }
 
-        .time-bar:active {
-            cursor: grabbing;
+        .bar-label {
+            flex: 1;
+            text-align: center;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: white;
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+            padding: 0 4px;
         }
 
-        /* 테마별 그라데이션 */
-        .bar-orange { background: var(--color-orange); box-shadow: 0 0 10px rgba(245, 158, 11, 0.4); }
-        .bar-purple { background: var(--color-purple); box-shadow: 0 0 10px rgba(168, 85, 247, 0.4); }
-        .bar-blue   { background: var(--color-blue);   box-shadow: 0 0 10px rgba(59, 130, 246, 0.4); }
-        .bar-teal   { background: var(--color-teal);   box-shadow: 0 0 10px rgba(20, 184, 166, 0.4); }
-        .bar-red    { background: var(--color-red);    box-shadow: 0 0 10px rgba(244, 63, 94, 0.4); }
-
-        .resize-handle {
-            width: 12px;
+        .resizer {
+            width: 8px;
             height: 100%;
-            background: rgba(255, 255, 255, 0.25);
+            background: rgba(255, 255, 255, 0.2);
             cursor: ew-resize;
-            transition: background 0.2s;
         }
+        .resizer.left { border-top-left-radius: 6px; border-bottom-left-radius: 6px; }
+        .resizer.right { border-top-right-radius: 6px; border-bottom-right-radius: 6px; }
 
-        .resize-handle:hover {
-            background: rgba(255, 255, 255, 0.5);
-        }
-
-        .resize-handle.left { border-top-left-radius: 8px; border-bottom-left-radius: 8px; }
-        .resize-handle.right { border-top-right-radius: 8px; border-bottom-right-radius: 8px; }
-
-        /* 실시간 인디케이터 (Red Line) */
-        .current-time-indicator {
+        /* 실시간 오늘/현재 인디케이터 라인 */
+        .live-marker-line {
             position: absolute;
             top: 0;
             bottom: 0;
-            width: 3px;
-            background-color: var(--danger-color);
-            z-index: 8;
-            pointer-events: none;
-            box-shadow: 0 0 10px rgba(239, 68, 68, 0.8);
-        }
-
-        .current-time-indicator::after {
-            content: "NOW";
-            position: absolute;
-            top: -20px;
-            left: 50%;
-            transform: translateX(-50%);
+            width: 2px;
             background: var(--danger-color);
-            color: white;
-            font-size: 0.65rem;
-            font-weight: bold;
-            padding: 2px 5px;
-            border-radius: 3px;
-            white-space: nowrap;
+            z-index: 10;
+            pointer-events: none;
         }
 
-        /* 완료 영역 */
-        .completed-section {
-            background: #111827;
-            border-radius: 12px;
+        /* 보관함 */
+        .archive-box {
+            background: var(--card-bg);
             border: 1px solid var(--border-color);
+            border-radius: 12px;
             padding: 15px;
-        }
-
-        .completed-trigger {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            cursor: pointer;
-            font-weight: bold;
-            font-size: 0.95rem;
-            color: var(--text-muted);
-        }
-
-        .completed-list {
-            margin-top: 15px;
-            display: none;
-            flex-direction: column;
-            gap: 1px;
-            background: var(--border-color);
-            border-radius: 8px;
-            overflow: hidden;
-        }
-
-        .completed-list.active {
-            display: flex;
-        }
-
-        .info-bar {
-            background: #1e293b;
-            padding: 10px 15px;
-            border-radius: 8px;
-            font-size: 0.85rem;
-            color: var(--text-muted);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .info-bar span strong {
-            color: #f59e0b;
         }
     </style>
 </head>
 <body>
 
+    <!-- 상단 헤더 영역 -->
     <header>
-        <div class="header-title-area">
-            <h1>🎬 On-Set Tracker (촬영 마스터 플랜)</h1>
-            <div style="font-size: 0.8rem; color: var(--text-muted);" id="current-clock">현재 실제 시간: Loading...</div>
+        <div class="title-container">
+            <input type="text" id="main-title" class="title-input" value="🎬 On-Set Tracker (촬영 마스터 플랜)" disabled>
+            <button id="lock-btn" class="lock-btn" onclick="toggleTitleLock()">🔒 수정</button>
         </div>
         <div class="control-panel">
-            <div class="toggle-container">
-                <button class="toggle-btn active" id="mode-real" onclick="switchTimeMode('real')">실제 시간 (08:00~)</button>
-                <button class="toggle-btn" id="mode-run" onclick="switchTimeMode('run')">진행 시간 (00:00~)</button>
-            </div>
-            <button onclick="addNewRow()">＋ 촬영 항목 추가</button>
-            <button class="danger" onclick="resetLocalStorage()">🔄 초기화 (새로 짜기)</button>
-            <button class="secondary" onclick="toggleCompletedSection()">📦 완료 보관함 (<span id="completed-count">0</span>)</button>
+            <button onclick="addNewProjectRow(null)">➕ 최상위 항목 추가</button>
+            <button class="secondary" onclick="resetAllData()">🔄 전체 초기화</button>
         </div>
     </header>
 
-    <div class="info-bar">
-        <span>💡 <strong>실시간 로컬 자동 저장 활성화 중!</strong> 새로고침을 하거나 창을 닫아도 소중한 계획이 그대로 유지됩니다.</span>
-        <span id="active-task-alert">🚨 지금 할 일: -</span>
+    <!-- 세팅 및 뷰 가젯 콘솔 -->
+    <div class="settings-bar">
+        <div class="flex-group">
+            <label>📅 <strong>타임라인 모드:</strong></label>
+            <select id="view-mode-select" onchange="changeViewMode(this.value)">
+                <option value="hour">시간 단위 뷰 (24시간)</option>
+                <option value="day">일 단위 뷰 (1일 ~ 31일)</option>
+                <option value="month">월 단위 뷰 (1월 ~ 12월)</option>
+                <option value="year">년 단위 뷰 (5개년 계획)</option>
+            </select>
+        </div>
+
+        <div class="flex-group">
+            <label>⚙️ 정렬 설정:</label>
+            <select id="sort-mode-select" onchange="changeSortMode(this.value)">
+                <option value="auto">⚡ 자동 스마트 정렬 모드</option>
+                <option value="manual">☰ 사용자 커스텀 드래그 정렬</option>
+            </select>
+        </div>
+
+        <div class="flex-group">
+            <span>🔍 <strong>그리드 줌 조절:</strong></span>
+            <button class="secondary" onclick="adjustZoom(-10)">➖ 축소</button>
+            <button class="secondary" onclick="adjustZoom(10)">➕ 확대</button>
+        </div>
     </div>
 
-    <div class="timeline-container">
-        <div class="timeline-scroll-area">
-            <div class="timeline-table">
-                <div class="table-header">
-                    <div class="header-top-row" id="header-top">
-                        </div>
-                    <div class="header-bottom-row" id="header-bottom">
-                        </div>
+    <!-- 메인 가로 스크롤 타임라인 보드 -->
+    <div class="timeline-board">
+        <div class="timeline-container-scroll" id="scroll-wrapper">
+            <div class="timeline-table" id="timeline-main-table">
+                
+                <!-- 상단 타이밍 스케일 헤더 헤드 -->
+                <div class="table-header" id="render-header-row">
+                    <!-- JS 동적 주입 -->
                 </div>
 
-                <div id="task-rows-container">
-                    </div>
+                <!-- 렌더링 컨테이너 트랙 -->
+                <div id="dynamic-rows-container">
+                    <!-- JS 동적 주입 -->
+                </div>
 
-                <div class="current-time-indicator" id="red-line"></div>
+                <!-- 현재 지점 추적 세로 마커 -->
+                <div class="live-marker-line" id="live-timeline-marker"></div>
+
             </div>
         </div>
     </div>
 
-    <div class="completed-section">
-        <div class="completed-trigger" onclick="toggleCompletedSection()">
-            <span>📦 완료된 항목 목록 (사라진 계획들 확인)</span>
-            <span id="arrow-icon">▼</span>
-        </div>
-        <div id="completed-list" class="completed-list">
-            </div>
+    <!-- 보관 영역 정보 -->
+    <div class="archive-box">
+        <span style="font-size: 0.85rem; color: var(--text-muted);">
+            💡 <strong>커스텀 가이드:</strong> 각 항목의 <code>시작</code> / <code>종료</code> 칸 숫자를 직접 수정해도 인디케이터에 즉시 반영됩니다. 항목들을 계층 구조로 폴더처럼 접고 펼쳐 관리하세요.
+        </span>
     </div>
 
     <script>
-        // 초기 템플릿 기본값 (로컬 스토리지에 데이터가 없으면 사용)
-        const defaultTasks = [
-            { id: 1, name: "장비 세팅 및 구도 잡기", startCell: 0, endCell: 12, completed: false, color: "orange", isAutoBreak: false },
-            { id: 2, name: "A 카메라 바스트 샷 촬영", startCell: 12, endCell: 24, completed: false, color: "blue", isAutoBreak: false },
-            { id: 3, name: "B 마이크 음향 체크 및 조명 조절", startCell: 6, endCell: 18, completed: false, color: "purple", isAutoBreak: false }
+        // 기본 초기 데이터셋 구조
+        const initialTemplate = [
+            { id: "t1", name: "1단계: 사전 프로덕션 기획", start: 2, end: 12, parentId: null, completed: false, open: true },
+            { id: "t2", name: "콘셉트 미팅 및 시나리오 확정", start: 2, end: 6, parentId: "t1", completed: false, open: true },
+            { id: "t3", name: "2단계: 메인 촬영 일정", start: 12, end: 30, parentId: null, completed: false, open: true },
+            { id: "t4", name: "A캠 메인 드라마 촬영", start: 12, end: 20, parentId: "t3", completed: false, open: true }
         ];
 
-        let tasks = [];
-        const totalCells = 120; // 5분 단위 * 12칸 * 10시간 = 총 120칸
-        let timeMode = 'real';
-        let relativeStartTime = null;
+        let projectTasks = [];
+        let viewMode = 'hour'; // hour, day, month, year
+        let sortMode = 'auto'; // auto, manual
+        let cellWidth = 50;    // 1칸의 기본 가로폭 픽셀수 (Zoom 데이터)
+        let totalGridCount = 24; // 모드별 총 칸수 개수 기본 배치
 
-        // 드래그 제어 상태 변수들
-        let isDragging = false;
-        let isResizingLeft = false;
-        let isResizingRight = false;
-        let activeTaskId = null;
-        let startX = 0;
-        let originalStartCell = 0;
-        let originalEndCell = 0;
+        // 드래그 상태 관리 변수
+        let currentDragBarId = null;
+        let dragType = null; // 'move', 'left', 'right'
+        let dragStartX = 0;
+        let dragStartLeftCell = 0;
+        let dragStartEndCell = 0;
 
-        // 💾 1. 데이터 로드 (Local Storage)
-        function loadSavedData() {
-            const savedTasks = localStorage.getItem('onset_tasks');
-            if (savedTasks) {
-                tasks = JSON.parse(savedTasks);
-            } else {
-                tasks = JSON.parse(JSON.stringify(defaultTasks));
-            }
+        // 수동 행 순서 변경용 변수
+        let rowDragSourceId = null;
 
-            const savedTimeMode = localStorage.getItem('onset_time_mode');
-            if (savedTimeMode) {
-                timeMode = savedTimeMode;
-            }
+        // 💾 1. 초기 데이터 불러오기
+        function init() {
+            const savedData = localStorage.getItem('pm_project_tasks');
+            const savedTitle = localStorage.getItem('pm_project_title');
+            const savedMode = localStorage.getItem('pm_view_mode');
+            const savedSort = localStorage.getItem('pm_sort_mode');
 
-            const savedStartTime = localStorage.getItem('onset_relative_start');
-            if (savedStartTime) {
-                relativeStartTime = new Date(savedStartTime);
-            }
+            if (savedData) projectTasks = JSON.parse(savedData);
+            else projectTasks = JSON.parse(JSON.stringify(initialTemplate));
+
+            if (savedTitle) document.getElementById('main-title').value = savedTitle;
+            if (savedMode) { viewMode = savedMode; document.getElementById('view-mode-select').value = savedMode; }
+            if (savedSort) { sortMode = savedSort; document.getElementById('sort-mode-select').value = savedSort; }
+
+            configureGridUnits();
+            renderAll();
         }
 
-        // 💾 2. 데이터 세이브 (Local Storage)
         function saveData() {
-            // 자동 생성된 휴식(isAutoBreak)은 로컬 스토리지 저장 대상에서 제외 (실시간 자동 재생성되므로)
-            const userTasksOnly = tasks.filter(t => !t.isAutoBreak);
-            localStorage.setItem('onset_tasks', JSON.stringify(userTasksOnly));
-            localStorage.setItem('onset_time_mode', timeMode);
-            if (relativeStartTime) {
-                localStorage.setItem('onset_relative_start', relativeStartTime.toISOString());
+            localStorage.setItem('pm_project_tasks', JSON.stringify(projectTasks));
+            localStorage.setItem('pm_project_title', document.getElementById('main-title').value);
+            localStorage.setItem('pm_view_mode', viewMode);
+            localStorage.setItem('pm_sort_mode', sortMode);
+        }
+
+        // 🔒 제목 수정 및 잠금 토글
+        function toggleTitleLock() {
+            const titleInput = document.getElementById('main-title');
+            const lockBtn = document.getElementById('lock-btn');
+            if (titleInput.disabled) {
+                titleInput.disabled = false;
+                titleInput.focus();
+                lockBtn.innerText = "🔓 저장";
+            } else {
+                titleInput.disabled = true;
+                lockBtn.innerText = "🔒 수정";
+                saveData();
             }
         }
 
-        // 💾 3. 완전 초기화 (새로 짜기)
-        function resetLocalStorage() {
-            if (confirm("현재 작성한 데이터와 정비 현황을 전부 리셋하고 처음 초기상태로 가시겠습니까?")) {
+        // ⚙️ 모드 체인저 설정 규칙 정의
+        function configureGridUnits() {
+            if (viewMode === 'hour') totalGridCount = 24;      // 24시간
+            else if (viewMode === 'day') totalGridCount = 31;   // 31일
+            else if (viewMode === 'month') totalGridCount = 12; // 12개월
+            else if (viewMode === 'year') totalGridCount = 5;   // 5개년
+        }
+
+        function changeViewMode(mode) {
+            viewMode = mode;
+            configureGridUnits();
+            // 모드 전환 시 인디케이터가 화면 범위를 초과하는 것 가드 처리
+            projectTasks.forEach(t => {
+                if(t.end > totalGridCount) t.end = totalGridCount;
+                if(t.start >= totalGridCount) t.start = Math.max(0, totalGridCount - 2);
+            });
+            saveData();
+            renderAll();
+        }
+
+        function changeSortMode(mode) {
+            sortMode = mode;
+            saveData();
+            renderAll();
+        }
+
+        function adjustZoom(amount) {
+            cellWidth = Math.max(25, Math.min(150, cellWidth + amount));
+            renderAll();
+        }
+
+        function resetAllData() {
+            if(confirm("모든 기획 데이터와 커스텀 설정을 초기화하고 처음 상태로 복구할까요?")) {
                 localStorage.clear();
-                relativeStartTime = null;
-                timeMode = 'real';
-                tasks = JSON.parse(JSON.stringify(defaultTasks));
-                saveData();
                 location.reload();
             }
         }
 
-        // 🛠️ 4. 정렬 및 자동 휴식(Break Gap) 채우기 코어 로직
-        function processTimelineLogic() {
-            // 4-1. 먼저 기존의 자동 생성되었던 휴식 정비 제거 (재평가용)
-            tasks = tasks.filter(t => !t.isAutoBreak);
-
-            // 4-2. 유저가 생성한 진행 중(체크 해제)인 항목들의 시간 점유 파악
-            const activeUserTasks = tasks.filter(t => !t.completed);
-
-            // 4-3. [중첩 작업 정렬] - 더 일찍 시작하고, 더 짧은 게 위로 가도록 정렬!
-            activeUserTasks.sort((a, b) => {
-                if (a.startCell !== b.startCell) {
-                    return a.startCell - b.startCell; // 시작 시간 빠른 순
-                }
-                const durationA = a.endCell - a.startCell;
-                const durationB = b.endCell - b.startCell;
-                if (durationA !== durationB) {
-                    return durationA - durationB; // 더 짧은(빨리 끝나는) 순
-                }
-                return a.endCell - b.endCell; // 종료 시간 빠른 순
-            });
-
-            // 완료된 태스크 목록 분리
-            const completedUserTasks = tasks.filter(t => t.completed);
-
-            // 4-4. [자동 휴식(Gap) 계산기]
-            // 0부터 120칸 중 유저 작업이 아무것도 차지하지 않은 구간을 찾아서 자동으로 메워줌
-            const occupied = new Array(totalCells).fill(false);
-            activeUserTasks.forEach(t => {
-                for (let i = t.startCell; i < t.endCell; i++) {
-                    if (i >= 0 && i < totalCells) occupied[i] = true;
-                }
-            });
-
-            let gapStart = null;
-            let breakIdCounter = 99000;
-
-            for (let i = 0; i <= totalCells; i++) {
-                if (i < totalCells && !occupied[i]) {
-                    if (gapStart === null) {
-                        gapStart = i;
-                    }
-                } else {
-                    if (gapStart !== null) {
-                        // 빈 간격 발견! 자동으로 '휴식 및 정비' 태스크 삽입
-                        tasks.push({
-                            id: breakIdCounter++,
-                            name: "🧹 [자동] 휴식 및 촬영 정비 시간",
-                            startCell: gapStart,
-                            endCell: i,
-                            completed: false,
-                            color: "teal",
-                            isAutoBreak: true
-                        });
-                        gapStart = null;
-                    }
-                }
+        // 🛠️ 2. 구조화 정렬 트랙 헬퍼 엔진
+        function getSortedTasks() {
+            if (sortMode === 'manual') {
+                // 수동 정렬일 때는 트리 계층만 유지한 채 사용자가 섞은 원본 리스트 순서 가공 배치
+                return buildTreeStructure(projectTasks);
+            } else {
+                // 자동 모드: 상위 수준 정렬(시작점이 빠르고 길이가 짧은 것 위주 정렬) 후 트리 조립
+                const roots = projectTasks.filter(t => !t.parentId);
+                roots.sort((a,b) => a.start - b.start || (a.end - a.start) - (b.end - b.start));
+                
+                let result = [];
+                roots.forEach(root => {
+                    result.push(root);
+                    const children = projectTasks.filter(t => t.parentId === root.id);
+                    children.sort((a,b) => a.start - b.start || (a.end - a.start) - (b.end - b.start));
+                    result.push(...children);
+                });
+                return buildTreeStructure(result);
             }
-
-            // 최종 정렬 반영 조립
-            const activeBreaks = tasks.filter(t => t.isAutoBreak);
-            
-            // 본체 정렬: 정비 바와 사용자 지정 액션 정렬 결합
-            const sortedActive = [...activeUserTasks, ...activeBreaks].sort((a, b) => {
-                if (a.startCell !== b.startCell) return a.startCell - b.startCell;
-                return (a.endCell - a.startCell) - (b.endCell - b.startCell);
-            });
-
-            tasks = [...sortedActive, ...completedUserTasks];
         }
 
-        // ⏰ 5. 헤더 렌더링 (이중 구조)
+        function buildTreeStructure(flatList) {
+            // 트리 렌더링 시 숨겨진 부모 자식 예외처리 필터링용 마킹 적용
+            let renderedList = [];
+            let hiddenSet = new Set();
+
+            // 부모 숨김 상태 체크
+            flatList.forEach(t => {
+                if (t.parentId && (hiddenSet.has(t.parentId) || !isParentOpen(t.parentId, flatList))) {
+                    hiddenSet.add(t.id);
+                }
+            });
+
+            return flatList.filter(t => !hiddenSet.has(t.id));
+        }
+
+        function isParentOpen(parentId, list) {
+            const parent = list.find(t => t.id === parentId);
+            if (!parent) return true;
+            if (!parent.open) return false;
+            if (parent.parentId) return isParentOpen(parent.parentId, list);
+            return true;
+        }
+
+        // 🎨 3. 렌더링 마스터 엔진 (Core)
+        function renderAll() {
+            renderHeader();
+            renderRows();
+            updateLiveMarker();
+        }
+
         function renderHeader() {
-            const headerTop = document.getElementById('header-top');
-            const headerBottom = document.getElementById('header-bottom');
+            const headerRow = document.getElementById('render-header-row');
+            headerRow.innerHTML = `<div class="header-frozen-zone">분류 및 진행 단계 목록</div>`;
 
-            headerTop.innerHTML = '<div class="header-task-title">진행 단계 / 컷 목록</div>';
-            headerBottom.innerHTML = '<div class="header-task-title" style="font-size:0.75rem; color:#64748b; height:100%;">5분 단위 세부 눈금</div>';
+            const gridZone = document.createElement('div');
+            gridZone.className = 'header-grid-zone';
 
-            const topGrid = document.createElement('div');
-            topGrid.className = 'time-slots-container';
-
-            const bottomGrid = document.createElement('div');
-            bottomGrid.className = 'time-slot-minor-container';
-
-            // 큰 시간(1시간) 10칸 생성
-            for (let i = 0; i < 10; i++) {
-                const slot = document.createElement('div');
-                slot.className = 'time-slot-major';
-                
-                if (timeMode === 'real') {
-                    let hour = 8 + i;
-                    let ampm = hour >= 12 ? '오후' : '오전';
-                    let displayHour = hour > 12 ? hour - 12 : hour;
-                    slot.innerText = `${ampm} ${displayHour}시`;
-                } else {
-                    slot.innerText = `+${String(i).padStart(2, '0')}:00`;
-                }
-                topGrid.appendChild(slot);
-
-                // 각 시간 아래에 5분 단위 미세 단위 라벨 12개 채우기
-                for (let m = 0; m < 12; m++) {
-                    const minSlot = document.createElement('div');
-                    minSlot.className = 'time-slot-minor';
-                    // 가시성을 위해 10분, 30분, 50분 위치에만 분 라벨링
-                    const minVal = m * 5;
-                    if (minVal === 0) {
-                        minSlot.innerText = "00분";
-                        minSlot.style.color = "#94a3b8";
-                    } else if (minVal === 30) {
-                        minSlot.innerText = "30";
-                    } else if (minVal === 10 || minVal === 20 || minVal === 40 || minVal === 50) {
-                        minSlot.innerText = `${minVal}`;
-                    } else {
-                        minSlot.innerText = "·";
-                    }
-                    bottomGrid.appendChild(minSlot);
-                }
+            for (let i = 0; i < totalGridCount; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'grid-header-cell';
+                cell.style.width = `${cellWidth}px`;
+                cell.innerText = getHeaderLabel(i);
+                gridZone.appendChild(cell);
             }
-
-            headerTop.appendChild(topGrid);
-            headerBottom.appendChild(bottomGrid);
+            headerRow.appendChild(gridZone);
         }
 
-        // 🎨 6. 전체 목록 및 타임라인 렌더링
-        function render() {
-            processTimelineLogic();
+        function getHeaderLabel(index) {
+            if (viewMode === 'hour') return `${index}시`;
+            if (viewMode === 'day') return `${index + 1}일`;
+            if (viewMode === 'month') return `${index + 1}월`;
+            if (viewMode === 'year') return `${2026 + index}년`;
+            return index;
+        }
 
-            const container = document.getElementById('task-rows-container');
-            const completedList = document.getElementById('completed-list');
+        function renderRows() {
+            const container = document.getElementById('dynamic-rows-container');
             container.innerHTML = '';
-            completedList.innerHTML = '';
 
-            let completedCount = 0;
+            const activeList = getSortedTasks();
 
-            tasks.forEach(task => {
+            activeList.forEach((task, index) => {
                 const row = document.createElement('div');
-                row.className = `task-row ${task.completed ? 'completed' : ''} ${task.isAutoBreak ? 'auto-break' : ''}`;
+                row.className = `task-row ${task.completed ? 'completed' : ''}`;
                 row.dataset.id = task.id;
-                
-                // 좌측 영역
-                const infoDiv = document.createElement('div');
-                infoDiv.className = 'task-info';
-                
-                const checkBtn = document.createElement('button');
-                checkBtn.className = 'btn-check';
-                checkBtn.innerHTML = '✓';
-                checkBtn.onclick = (e) => {
-                    e.stopPropagation();
-                    toggleComplete(task.id);
-                };
-                
-                const inputName = document.createElement('input');
-                inputName.type = 'text';
-                inputName.value = task.name;
-                // 자동 생성된 휴식 행은 타이틀 직접 수정 불가하게 방어
-                if (task.isAutoBreak) {
-                    inputName.disabled = true;
-                    inputName.style.color = "#f59e0b";
-                    inputName.style.fontStyle = "italic";
-                }
-                inputName.onchange = (e) => { 
-                    task.name = e.target.value; 
-                    saveData();
-                };
 
-                infoDiv.appendChild(checkBtn);
-                infoDiv.appendChild(inputName);
-
-                // [유닛별 컬러 셀렉터] - 수동 작업에만 색상 변경 가능하게 적용
-                if (!task.completed && !task.isAutoBreak) {
-                    const picker = document.createElement('div');
-                    picker.className = 'color-picker';
-                    const colors = ['orange', 'purple', 'blue', 'teal', 'red'];
-                    colors.forEach(col => {
-                        const dot = document.createElement('div');
-                        dot.className = `color-dot ${task.color === col ? 'active' : ''}`;
-                        dot.style.background = `var(--color-${col})`;
-                        dot.onclick = () => {
-                            task.color = col;
-                            saveData();
-                            render();
-                        };
-                        picker.appendChild(dot);
+                // 수동 위치 변경용 행 드래그 이벤트
+                if (sortMode === 'manual') {
+                    row.draggable = true;
+                    row.addEventListener('dragstart', (e) => { rowDragSourceId = task.id; row.classList.add('dragging'); });
+                    row.addEventListener('dragover', (e) => e.preventDefault());
+                    row.addEventListener('drop', (e) => {
+                        e.preventDefault();
+                        handleRowDrop(task.id);
                     });
-                    infoDiv.appendChild(picker);
+                    row.addEventListener('dragend', () => row.classList.remove('dragging'));
                 }
 
-                row.appendChild(infoDiv);
-
-                // 우측 그리드
-                const gridDiv = document.createElement('div');
-                gridDiv.className = 'timeline-grid';
-
-                for (let i = 0; i < totalCells; i++) {
-                    const cell = document.createElement('div');
-                    cell.className = 'grid-cell';
-                    gridDiv.appendChild(cell);
+                // 1. 좌측 정보 컨트롤 패널
+                const leftPanel = document.createElement('div');
+                leftPanel.className = 'task-left-panel';
+                // 하위 레이어일 때 들여쓰기 시각 효과 디자인
+                if (task.parentId) {
+                    leftPanel.style.paddingLeft = '30px';
                 }
 
-                // 타임라인 바 렌더링
-                if (task.startCell !== null && task.endCell !== null) {
-                    const bar = document.createElement('div');
-                    bar.className = `time-bar bar-${task.color || 'orange'}`;
-                    
-                    const leftPercent = (task.startCell / totalCells) * 100;
-                    const widthPercent = ((task.endCell - task.startCell) / totalCells) * 100;
-                    bar.style.left = `${leftPercent}%`;
-                    bar.style.width = `${widthPercent}%`;
+                // 드래그 핸들 (수동 정렬 시에만 노출)
+                if (sortMode === 'manual') {
+                    const handle = document.createElement('div');
+                    handle.className = 'drag-handle';
+                    handle.innerText = '☰';
+                    leftPanel.appendChild(handle);
+                }
 
-                    // 좌핸들
-                    const leftHandle = document.createElement('div');
-                    leftHandle.className = 'resize-handle left';
-                    
-                    // 중앙 텍스트 (시간 경과 표기)
-                    const barCenter = document.createElement('div');
-                    barCenter.style.flex = '1';
-                    barCenter.style.height = '100%';
-                    barCenter.style.display = 'flex';
-                    barCenter.style.alignItems = 'center';
-                    barCenter.style.justifyContent = 'center';
-                    barCenter.style.fontSize = '0.75rem';
-                    barCenter.style.fontWeight = 'bold';
-                    barCenter.style.color = 'white';
-                    
-                    const durationMinutes = (task.endCell - task.startCell) * 5;
-                    barCenter.innerText = `${durationMinutes}분`;
-
-                    // 우핸들
-                    const rightHandle = document.createElement('div');
-                    rightHandle.className = 'resize-handle right';
-
-                    // 자동 생성된 휴식 행은 사용자가 핸들로 늘리거나 움직이지 못하게 방어 (유저의 오리지널 타임바가 움직이면 자동 크기 조절)
-                    if (!task.isAutoBreak) {
-                        bar.appendChild(leftHandle);
-                        bar.appendChild(barCenter);
-                        bar.appendChild(rightHandle);
-
-                        // 마우스 및 터치 이벤트 부착
-                        leftHandle.addEventListener('mousedown', (e) => { e.stopPropagation(); startDrag(task.id, e.clientX, 'left'); });
-                        leftHandle.addEventListener('touchstart', (e) => { e.stopPropagation(); startDrag(task.id, e.touches[0].clientX, 'left'); });
-
-                        rightHandle.addEventListener('mousedown', (e) => { e.stopPropagation(); startDrag(task.id, e.clientX, 'right'); });
-                        rightHandle.addEventListener('touchstart', (e) => { e.stopPropagation(); startDrag(task.id, e.touches[0].clientX, 'right'); });
-
-                        barCenter.addEventListener('mousedown', (e) => { e.stopPropagation(); startDrag(task.id, e.clientX, 'move'); });
-                        barCenter.addEventListener('touchstart', (e) => { e.stopPropagation(); startDrag(task.id, e.touches[0].clientX, 'move'); });
-                    } else {
-                        // 자동 휴식바는 안내 텍스트 처리
-                        barCenter.innerText = `☕ 정비 ${durationMinutes}분`;
-                        bar.appendChild(barCenter);
+                // 아코디언 토글 화살표 (자식이 있는 경우만 처리)
+                const hasChild = projectTasks.some(t => t.parentId === task.id);
+                const arrow = document.createElement('div');
+                arrow.className = 'toggle-arrow';
+                arrow.innerText = hasChild ? (task.open ? '▼' : '▶') : '•';
+                arrow.onclick = () => {
+                    if (hasChild) {
+                        task.open = !task.open;
+                        saveData();
+                        renderAll();
                     }
+                };
+                leftPanel.appendChild(arrow);
 
-                    gridDiv.appendChild(bar);
+                // 완료 체크 박스
+                const chk = document.createElement('button');
+                chk.className = 'btn-check';
+                chk.style.width = '20px'; chk.style.height = '20px'; chk.style.borderRadius = '50%';
+                chk.style.border = '2px solid #64748b'; chk.style.background = task.completed ? 'var(--success-color)' : 'transparent';
+                chk.innerText = task.completed ? '✓' : '';
+                chk.onclick = () => {
+                    task.completed = !task.completed;
+                    saveData();
+                    renderAll();
+                };
+                leftPanel.appendChild(chk);
+
+                // 명칭 입력 인풋
+                const inputName = document.createElement('input');
+                inputName.className = 'task-name-input';
+                inputName.value = task.name;
+                inputName.onchange = (e) => { task.name = e.target.value; saveData(); };
+                leftPanel.appendChild(inputName);
+
+                // [추가 기능] 수치 직접 입력 가젯 상자
+                const rangeBox = document.createElement('div');
+                rangeBox.className = 'cell-range-inputs';
+                rangeBox.innerHTML = `
+                    <input type="number" min="0" max="${totalGridCount}" value="${task.start}" onchange="updateTaskRange('${task.id}', 'start', this.value)">
+                    <span>~</span>
+                    <input type="number" min="1" max="${totalGridCount}" value="${task.end}" onchange="updateTaskRange('${task.id}', 'end', this.value)">
+                `;
+                leftPanel.appendChild(rangeBox);
+
+                // 하위 단계 추가 및 삭제 버튼 액션 제어기
+                if (!task.parentId) {
+                    const btnAddSub = document.createElement('button');
+                    btnAddSub.className = 'secondary';
+                    btnAddSub.style.padding = '3px 6px'; btnAddSub.style.fontSize = '0.7rem';
+                    btnAddSub.innerText = '📁 +';
+                    btnAddSub.title = '하위 자식 업무 단계를 개설합니다';
+                    btnAddSub.onclick = () => addNewProjectRow(task.id);
+                    leftPanel.appendChild(btnAddSub);
                 }
 
-                row.appendChild(gridDiv);
+                const btnDel = document.createElement('button');
+                btnDel.className = 'danger';
+                btnDel.style.padding = '3px 6px'; btnDel.style.fontSize = '0.7rem'; btnDel.innerText = '✕';
+                btnDel.onclick = () => deleteProjectRow(task.id);
+                leftPanel.appendChild(btnDel);
 
-                if (task.completed) {
-                    completedCount++;
-                    completedList.appendChild(row);
-                } else {
-                    container.appendChild(row);
+                row.appendChild(leftPanel);
+
+                // 2. 우측 타임라인 인디케이터 트랙 채우기
+                const rightTrack = document.createElement('div');
+                rightTrack.className = 'task-right-track';
+                rightTrack.style.width = `${cellWidth * totalGridCount}px`;
+
+                for (let i = 0; i < totalGridCount; i++) {
+                    const unit = document.createElement('div');
+                    unit.className = 'track-grid-unit';
+                    unit.style.width = `${cellWidth}px`;
+                    rightTrack.appendChild(unit);
                 }
+
+                // 실제 주황 바 장착
+                const bar = document.createElement('div');
+                bar.className = 'time-bar-element';
+                
+                const leftPos = task.start * cellWidth;
+                const barWidth = (task.end - task.start) * cellWidth;
+                bar.style.left = `${leftPos}px`;
+                bar.style.width = `${barWidth}px`;
+
+                // 조절부 레고 조립
+                const handleL = document.createElement('div'); handleL.className = 'resizer left';
+                const label = document.createElement('div'); label.className = 'bar-label'; label.innerText = task.name || '이름 없음';
+                const handleR = document.createElement('div'); handleR.className = 'resizer right';
+
+                bar.appendChild(handleL);
+                bar.appendChild(label);
+                bar.appendChild(handleR);
+
+                // 마우스/터치 바 컨트롤 어태치먼트
+                handleL.addEventListener('mousedown', (e) => { e.stopPropagation(); initBarDrag(task.id, 'left', e.clientX); });
+                handleR.addEventListener('mousedown', (e) => { e.stopPropagation(); initBarDrag(task.id, 'right', e.clientX); });
+                label.addEventListener('mousedown', (e) => { e.stopPropagation(); initBarDrag(task.id, 'move', e.clientX); });
+
+                rightTrack.appendChild(bar);
+                row.appendChild(rightTrack);
+                container.appendChild(row);
             });
-
-            document.getElementById('completed-count').innerText = completedCount;
-            updateActiveTaskAlert();
         }
 
-        // --- 실시간 5분 단위 세밀 드래그 가공 인터페이스 ---
-        function startDrag(taskId, clientX, mode) {
-            isDragging = mode === 'move';
-            isResizingLeft = mode === 'left';
-            isResizingRight = mode === 'right';
-            activeTaskId = taskId;
-            startX = clientX;
+        // 🔢 수치 직접 변경 파서
+        function updateTaskRange(id, field, val) {
+            const task = projectTasks.find(t => t.id === id);
+            if (!task) return;
+            let num = parseInt(val, 10);
+            if (isNaN(num)) return;
 
-            const task = tasks.find(t => t.id === taskId);
-            originalStartCell = task.startCell;
-            originalEndCell = task.endCell;
-
-            document.addEventListener('mousemove', onDragMove);
-            document.addEventListener('mouseup', endDrag);
-            document.addEventListener('touchmove', onDragTouchMove, { passive: false });
-            document.addEventListener('touchend', endDrag);
+            if (field === 'start') {
+                if (num >= 0 && num < task.end) task.start = num;
+            } else {
+                if (num > task.start && num <= totalGridCount) task.end = num;
+            }
+            saveData();
+            renderAll();
         }
 
-        function onDragTouchMove(e) {
-            e.preventDefault();
-            onDragMove(e.touches[0]);
+        // 🏗️ 4. 인터랙티브 마우스 드래그 핸들링 제어 장치
+        function initBarDrag(id, type, clientX) {
+            currentDragBarId = id;
+            dragType = type;
+            dragStartX = clientX;
+
+            const task = projectTasks.find(t => t.id === id);
+            dragStartLeftCell = task.start;
+            dragStartEndCell = task.end;
+
+            document.addEventListener('mousemove', onBarDragMove);
+            document.addEventListener('mouseup', endBarDrag);
         }
 
-        function onDragMove(e) {
-            if (activeTaskId === null) return;
-            const task = tasks.find(t => t.id === activeTaskId);
+        function onBarDragMove(e) {
+            if (!currentDragBarId) return;
+            const task = projectTasks.find(t => t.id === currentDragBarId);
             
-            const gridElement = document.querySelector('.timeline-grid');
-            if (!gridElement) return;
-            const cellWidth = gridElement.clientWidth / totalCells;
-
-            const deltaX = e.clientX - startX;
+            const deltaX = e.clientX - dragStartX;
             const cellDelta = Math.round(deltaX / cellWidth);
 
-            if (isDragging) {
-                let newStart = originalStartCell + cellDelta;
-                let newEnd = originalEndCell + cellDelta;
-                if (newStart >= 0 && newEnd <= totalCells) {
-                    task.startCell = newStart;
-                    task.endCell = newEnd;
+            if (dragType === 'move') {
+                let ns = dragStartLeftCell + cellDelta;
+                let ne = dragStartEndCell + cellDelta;
+                if (ns >= 0 && ne <= totalGridCount) {
+                    task.start = ns;
+                    task.end = ne;
                 }
-            } else if (isResizingLeft) {
-                let newStart = originalStartCell + cellDelta;
-                if (newStart >= 0 && newStart < task.endCell) {
-                    task.startCell = newStart;
-                }
-            } else if (isResizingRight) {
-                let newEnd = originalEndCell + cellDelta;
-                if (newEnd > task.startCell && newEnd <= totalCells) {
-                    task.endCell = newEnd;
-                }
+            } else if (dragType === 'left') {
+                let ns = dragStartLeftCell + cellDelta;
+                if (ns >= 0 && ns < task.end) task.start = ns;
+            } else if (dragType === 'right') {
+                let ne = dragStartEndCell + cellDelta;
+                if (ne > task.start && ne <= totalGridCount) task.end = ne;
             }
-            render();
+            renderAll();
         }
 
-        function endDrag() {
-            activeTaskId = null;
-            isDragging = false;
-            isResizingLeft = false;
-            isResizingRight = false;
-            document.removeEventListener('mousemove', onDragMove);
-            document.removeEventListener('mouseup', endDrag);
-            document.removeEventListener('touchmove', onDragTouchMove);
-            document.removeEventListener('touchend', endDrag);
-            saveData(); // 드래그 마친 뒤 데이터 영구 저장!
-        }
-
-        // --- 시간 연동 및 인디케이터 기믹 ---
-        function switchTimeMode(mode) {
-            timeMode = mode;
-            document.getElementById('mode-real').classList.toggle('active', mode === 'real');
-            document.getElementById('mode-run').classList.toggle('active', mode === 'run');
-            
-            if (mode === 'run' && !relativeStartTime) {
-                relativeStartTime = new Date();
-            }
+        function endBarDrag() {
+            currentDragBarId = null;
+            document.removeEventListener('mousemove', onBarDragMove);
+            document.removeEventListener('mouseup', endBarDrag);
             saveData();
-            renderHeader();
-            updateTimelineClockAndRedLine();
         }
 
-        function updateTimelineClockAndRedLine() {
-            const now = new Date();
+        // ☰ 수동 행 순서 변경 로직 (정렬 교체 연산)
+        function handleRowDrop(targetId) {
+            if (!rowDragSourceId || rowDragSourceId === targetId) return;
+
+            const sourceIdx = projectTasks.findIndex(t => t.id === rowDragSourceId);
+            const targetIdx = projectTasks.findIndex(t => t.id === targetId);
             
-            const ampmStr = now.getHours() >= 12 ? '오후' : '오전';
-            const displayHours = now.getHours() > 12 ? now.getHours() - 12 : now.getHours();
-            document.getElementById('current-clock').innerText = 
-                `현재 실제 시간: ${ampmStr} ${displayHours}시 ${String(now.getMinutes()).padStart(2, '0')}분 ${String(now.getSeconds()).padStart(2, '0')}초`;
-
-            let percent = 0;
-            const gridElement = document.querySelector('.timeline-grid');
-            if (!gridElement) return;
-
-            if (timeMode === 'real') {
-                const startHour = 8;
-                const endHour = 18;
-                const totalMinutes = (endHour - startHour) * 60; // 600분
-
-                const currentHour = now.getHours();
-                const currentMinute = now.getMinutes();
-                const minutesPassed = (currentHour - startHour) * 60 + currentMinute;
-
-                if (minutesPassed >= 0 && minutesPassed <= totalMinutes) {
-                    percent = (minutesPassed / totalMinutes) * 100;
-                    document.getElementById('red-line').style.display = 'block';
-                    document.getElementById('red-line').style.left = `calc(320px + ${percent}%)`;
-                } else {
-                    document.getElementById('red-line').style.display = 'none';
-                }
-            } else {
-                if (relativeStartTime) {
-                    const elapsedMs = now - relativeStartTime;
-                    const elapsedMinutes = Math.floor(elapsedMs / 1000 / 60);
-                    const totalMinutes = 600;
-
-                    if (elapsedMinutes >= 0 && elapsedMinutes <= totalMinutes) {
-                        percent = (elapsedMinutes / totalMinutes) * 100;
-                        document.getElementById('red-line').style.display = 'block';
-                        document.getElementById('red-line').style.left = `calc(320px + ${percent}%)`;
-                    } else {
-                        document.getElementById('red-line').style.display = 'none';
-                    }
-                } else {
-                    document.getElementById('red-line').style.display = 'none';
-                }
+            if (sourceIdx !== -1 && targetIdx !== -1) {
+                // 배열 순서 스왑 연산 가공 처리
+                const [removed] = projectTasks.splice(sourceIdx, 1);
+                projectTasks.splice(targetIdx, 0, removed);
+                saveData();
+                renderAll();
             }
         }
 
-        function updateActiveTaskAlert() {
-            const now = new Date();
-            let currentCellIndex = -1;
-
-            if (timeMode === 'real') {
-                const startHour = 8;
-                const minutesPassed = (now.getHours() - startHour) * 60 + now.getMinutes();
-                if (minutesPassed >= 0) {
-                    currentCellIndex = Math.floor(minutesPassed / 5);
-                }
-            } else if (relativeStartTime) {
-                const elapsedMs = now - relativeStartTime;
-                const elapsedMinutes = Math.floor(elapsedMs / 1000 / 60);
-                if (elapsedMinutes >= 0) {
-                    currentCellIndex = Math.floor(elapsedMinutes / 5);
-                }
-            }
-
-            let activeTaskName = "현재 진행 중인 예정된 액션이 없습니다.";
-            if (currentCellIndex >= 0 && currentCellIndex < totalCells) {
-                const activeTask = tasks.find(t => !t.completed && currentCellIndex >= t.startCell && currentCellIndex < t.endCell);
-                if (activeTask) {
-                    if (activeTask.isAutoBreak) {
-                        activeTaskName = `[${activeTask.name}] 장비 점검 및 티타임 진행 중 ☕`;
-                    } else {
-                        activeTaskName = `[${activeTask.name}] 촬영 진행 중`;
-                    }
-                }
-            }
-            document.getElementById('active-task-alert').innerHTML = `🚨 <strong>지금 할 일:</strong> ${activeTaskName}`;
-        }
-
-        function addNewRow() {
-            // 빈 공간이나 끝자리 찾기
-            const newId = tasks.length ? Math.max(...tasks.map(t => t.id)) + 1 : 1;
-            tasks.push({
-                id: newId,
-                name: `새 촬영 항목 ${newId}`,
-                startCell: 0,
-                endCell: 12,
+        // ➕ 행 생성 및 제어 로직들
+        function addNewProjectRow(parentId = null) {
+            const nextId = "t_" + Date.now();
+            projectTasks.push({
+                id: nextId,
+                name: parentId ? "↳ 하위 세부 단계 과업 명칭" : "새 마스터 비즈니스 대분류 항목",
+                start: 0,
+                end: 4,
+                parentId: parentId,
                 completed: false,
-                color: "orange",
-                isAutoBreak: false
+                open: true
             });
             saveData();
-            render();
+            renderAll();
         }
 
-        function toggleComplete(id) {
-            const task = tasks.find(t => t.id === id);
-            if (task) {
-                task.completed = !task.completed;
+        function deleteProjectRow(id) {
+            if(confirm("이 항목을 삭제할까요? (자식 하위 단계가 있다면 함께 삭제됩니다)")) {
+                projectTasks = projectTasks.filter(t => t.id !== id && t.parentId !== id);
                 saveData();
-                render();
+                renderAll();
             }
         }
 
-        function toggleCompletedSection() {
-            const list = document.getElementById('completed-list');
-            const arrow = document.getElementById('arrow-icon');
-            list.classList.toggle('active');
-            arrow.innerText = list.classList.contains('active') ? '▲' : '▼';
+        // 🚨 5. 실시간 동적 타임라인 트래커 라인 매칭 가젯
+        function updateLiveMarker() {
+            const now = new Date();
+            const marker = document.getElementById('live-timeline-marker');
+            let matchedCellIndex = -1;
+
+            if (viewMode === 'hour') {
+                // 시간축: 0~24시간 인덱스 대입
+                matchedCellIndex = now.getHours() + (now.getMinutes() / 60);
+            } else if (viewMode === 'day') {
+                // 일별축: 1~31일 인덱스 대입 (0부터 매칭하기 위해 -1 가공)
+                matchedCellIndex = (now.getDate() - 1) + (now.getHours() / 24);
+            } else if (viewMode === 'month') {
+                // 월별축: 1~12월 인덱스 대입
+                matchedCellIndex = now.getMonth() + (now.getDate() / 30);
+            } else if (viewMode === 'year') {
+                // 년별축: 2026년 기준 5개년 트랙킹 가공
+                const baseYear = 2026;
+                matchedCellIndex = (now.getFullYear() - baseYear) + (now.getMonth() / 12);
+            }
+
+            if (matchedCellIndex >= 0 && matchedCellIndex <= totalGridCount) {
+                const finalLeftPx = 400 + (matchedCellIndex * cellWidth); // 고정폭 400px 가중치 합산
+                marker.style.left = `${finalLeftPx}px`;
+                marker.style.display = 'block';
+            } else {
+                marker.style.display = 'none';
+            }
         }
 
-        // 1초 단위 실시간 시계 & 레드라인 작동기
-        setInterval(() => {
-            updateTimelineClockAndRedLine();
-            updateActiveTaskAlert();
-        }, 1000);
+        // 실시간 인디케이터 실시간 리프레시 엔진 구동
+        setInterval(updateLiveMarker, 5000);
 
-        // 초기 스타트
-        loadSavedData();
-        renderHeader();
-        render();
-        updateTimelineClockAndRedLine();
+        // 첫 페이지 로드 및 하트비트 시동
+        window.onload = init;
     </script>
 </body>
 </html>
