@@ -15,6 +15,7 @@
             --primary-hover: #2563eb;
             --success-color: #10b981;
             --danger-color: #ef4444;
+            --gap-bar-color: #0d9488;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: sans-serif; user-select: none; }
@@ -103,6 +104,13 @@
             border-radius: 6px; display: flex; justify-content: space-between; align-items: center;
             box-shadow: 0 4px 6px rgba(0,0,0,0.3); cursor: pointer; z-index: 5;
         }
+        
+        /* 🛠️ 자동 여백 전용 에메랄드 빗금 텍스처 스타일링 */
+        .time-bar-element.auto-gap-bar {
+            background: repeating-linear-gradient(45deg, #115e59, #115e59 8px, #134e4a 8px, #134e4a 16px) !important;
+            border: 1px dashed #2dd4bf;
+        }
+
         .bar-label { flex: 1; text-align: center; font-size: 0.75rem; font-weight: 700; color: white; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; padding: 0 4px; height: 100%; display: flex; align-items: center; justify-content: center; }
         .resizer { width: 8px; height: 100%; background: rgba(255, 255, 255, 0.2); cursor: ew-resize; z-index: 10; }
         .resizer:hover { background: rgba(255, 255, 255, 0.5); }
@@ -151,61 +159,67 @@
     </div>
 
     <script>
+        // 🛠️ 시간 엔진 핵심: 2026년 절대 일 단위 스케일 매퍼 구조 (전체 365일 기반으로 버그 완전 원천 차단)
+        const MONTH_DAYS = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+        const MONTH_STARTS = [];
+        let acc = 0;
+        for(let m=0; m<12; m++) {
+            MONTH_STARTS.push(acc);
+            acc += MONTH_DAYS[m];
+        }
+
         let state = {
             viewMode: 'ALL', 
-            focusMonth: 6, // 2026년 7월 기본 타겟팅 설정
-            focusWeek: 0,   
+            focusMonth: 0,   
+            focusWeek: 0,    
             focusDay: 0,     
-            cellWidth: 70,
+            projectFocusId: null, // 🛠️ 프로젝트별 집중 뷰 식별자 코드 추가
+            cellWidth: 60,
             titleBackup: "",
             inputBackups: {},
             collapsedNodes: {},
+            // 초기 모형 데이터 세팅 (2026년 절대 누적 Day 값 기반)
             tasks: [
-                { id: "t-1", parentId: null, name: "메인 프로덕션 빌드업", start: 0, end: 12, color: "#3b82f6", checked: false },
-                { id: "t-2", parentId: "t-1", name: "세부 연출 콘티 확정", start: 0, end: 5, color: "#a855f7", checked: false },
-                { id: "t-3", parentId: "t-1", name: "현장 장비 셋업 가이드", start: 8, end: 12, color: "#eab308", checked: false }
+                { id: "p-1", parentId: null, name: "메인 프로덕션 빌드업", start: 0, end: 85, color: "#3b82f6", checked: false },
+                { id: "p-2", parentId: "p-1", name: "세부 연출 콘티 확정", start: 0, end: 35, color: "#a855f7", checked: false },
+                { id: "p-3", parentId: "p-1", name: "현장 장비 셋업 가이드", start: 60, end: 85, color: "#eab308", checked: false }
             ]
         };
 
         const PALETTE = ["#3b82f6", "#a855f7", "#eab308", "#10b981", "#ef4444"];
         const DAYS_OF_WEEK = ["일", "월", "화", "수", "목", "금", "토"];
 
-        // 2026년 실제 월별 일수 구성 생성기
-        function getDaysInMonth(monthIndex) {
-            return new Date(2026, monthIndex + 1, 0).getDate();
-        }
-
-        function getDayOfWeekString(month, day) {
-            let d = new Date(2026, month, day);
+        function getDayOfWeekString(dayIndex) {
+            // 2026년 1월 1일은 목요일(4)에서 기인함
+            let d = new Date(2026, 0, dayIndex + 1);
             return DAYS_OF_WEEK[d.getDay()];
         }
 
-        // 특정 월의 주차별 일자 데이터 쪼개기 매퍼
-        function getWeeksMapOfMonth(monthIndex) {
-            let totalDays = getDaysInMonth(monthIndex);
+        function getWeeksMapOfMonth(mIdx) {
+            let totalDays = MONTH_DAYS[mIdx];
+            let startDayIdx = MONTH_STARTS[mIdx];
             let weeks = [];
-            let currentWeek = [];
-            for (let d = 1; d <= totalDays; d++) {
-                currentWeek.push(d);
-                if (currentWeek.length === 7 || d === totalDays) {
-                    weeks.push(currentWeek);
-                    currentWeek = [];
+            let current = [];
+            for (let d = 0; d < totalDays; d++) {
+                current.push(startDayIdx + d);
+                if (current.length === 7 || d === totalDays - 1) {
+                    weeks.push(current);
+                    current = [];
                 }
             }
-            return weeks; // [[1,2,3,4,5,6,7], [8,9...]] 구조
+            return weeks;
         }
 
         function init() {
-            const saved = localStorage.getItem('onset_tracker_calendar_v11');
+            const saved = localStorage.getItem('onset_tracker_absolute_v12');
             if (saved) state = JSON.parse(saved);
             setupTitleInput();
-            // 초기 구동 시 여백 검사 및 자동 항목 주입 연산 작동
             fillTimeGapsWithTasks();
             renderAll();
         }
 
         function saveData() {
-            localStorage.setItem('onset_tracker_calendar_v11', JSON.stringify(state));
+            localStorage.setItem('onset_tracker_absolute_v12', JSON.stringify(state));
         }
 
         function setupTitleInput() {
@@ -221,7 +235,7 @@
         function renderTrail() {
             const container = document.getElementById('nav-trail-container');
             container.innerHTML = '';
-            let html = `<span class="trail-link" onclick="changeView('ALL')">🏠 2026년 전체</span>`;
+            let html = `<span class="trail-link" onclick="clearProjectFocus(); changeView('ALL')">🏠 2026년 전체</span>`;
             
             if (state.viewMode === 'MONTH' || state.viewMode === 'WEEK' || state.viewMode === 'DAY') {
                 html += ` <span>&gt;</span> <span class="trail-link" onclick="changeView('MONTH', ${state.focusMonth})">${state.focusMonth + 1}월</span>`;
@@ -231,32 +245,45 @@
             }
             if (state.viewMode === 'DAY') {
                 let weeks = getWeeksMapOfMonth(state.focusMonth);
-                let dayNum = weeks[state.focusWeek][state.focusDay];
-                html += ` <span>&gt;</span> <span class="trail-link">${dayNum}일(${getDayOfWeekString(state.focusMonth, dayNum)}) 초정밀뷰</span>`;
+                let dayAbs = weeks[state.focusWeek][state.focusDay];
+                let dateNum = dayAbs - MONTH_STARTS[state.focusMonth] + 1;
+                html += ` <span>&gt;</span> <span class="trail-link">${dateNum}일(${getDayOfWeekString(dayAbs)}) 초정밀</span>`;
+            }
+            if (state.projectFocusId) {
+                let pTask = state.tasks.find(t => t.id === state.projectFocusId);
+                if (pTask) {
+                    html += ` <span style="color:#2dd4bf; margin-left:6px; font-weight:bold;">[🎯 뷰: ${pTask.name}]</span> <span class="trail-link" style="color:var(--danger-color);" onclick="clearProjectFocus()">✕ 해제</span>`;
+                }
             }
             container.innerHTML = html;
         }
 
+        function clearProjectFocus() {
+            state.projectFocusId = null;
+            saveData(); renderAll();
+        }
+
         function changeView(mode, m = 0, w = 0, d = 0) {
             state.viewMode = mode; state.focusMonth = m; state.focusWeek = w; state.focusDay = d;
-            state.cellWidth = (mode === 'DAY') ? 45 : 70;
+            state.cellWidth = (mode === 'DAY') ? 45 : 65;
             renderAll();
         }
 
-        function getGridConfig() {
-            if (state.viewMode === 'ALL') {
-                return { totalCells: 12, label: '월' };
-            }
+        // 🛠️ 현재 활성화된 화면 스케일 범위 구하기 (절대 좌표 역산용 함수)
+        function getActiveTimeRange() {
+            if (state.viewMode === 'ALL') return { start: 0, end: 365, step: 'MONTH' };
             if (state.viewMode === 'MONTH') {
-                let totalDays = getDaysInMonth(state.focusMonth);
-                return { totalCells: totalDays, label: '일' };
+                return { start: MONTH_STARTS[state.focusMonth], end: MONTH_STARTS[state.focusMonth] + MONTH_DAYS[state.focusMonth], step: 'DAY' };
             }
             if (state.viewMode === 'WEEK') {
                 let weeks = getWeeksMapOfMonth(state.focusMonth);
-                return { totalCells: weeks[state.focusWeek].length, label: '일' };
+                let currentWeek = weeks[state.focusWeek];
+                return { start: currentWeek[0], end: currentWeek[currentWeek.length - 1] + 1, step: 'DAY' };
             }
             if (state.viewMode === 'DAY') {
-                return { totalCells: 288, label: '5분' }; 
+                let weeks = getWeeksMapOfMonth(state.focusMonth);
+                let dayAbs = weeks[state.focusWeek][state.focusDay];
+                return { start: dayAbs, end: dayAbs + 1, step: 'MINUTE' };
             }
         }
 
@@ -268,13 +295,13 @@
             const row2 = document.createElement('div'); row2.className = 'header-row';
 
             const f1 = document.createElement('div'); f1.className = 'header-frozen-zone'; f1.innerText = "진행 단계 / 컷 목록";
-            const f2 = document.createElement('div'); f2.className = 'header-frozen-zone'; f2.innerText = "2026년 실제 달력 스케일";
+            const f2 = document.createElement('div'); f2.className = 'header-frozen-zone'; f2.innerText = "2026년 실제 달력 스케일 연동";
             row1.appendChild(f1); row2.appendChild(f2);
 
             const g1 = document.createElement('div'); g1.className = 'header-grid-zone';
             const g2 = document.createElement('div'); g2.className = 'header-grid-zone';
 
-            let conf = getGridConfig();
+            let range = getActiveTimeRange();
 
             if (state.viewMode === 'ALL') {
                 for (let m = 0; m < 12; m++) {
@@ -294,21 +321,21 @@
                 }
             } else if (state.viewMode === 'MONTH') {
                 const cell = document.createElement('div');
-                cell.className = 'main-time-cell'; cell.style.width = `${state.cellWidth * conf.totalCells}px`;
-                cell.innerText = `${state.focusMonth + 1}월 (일자별 실제 달력 연동 뷰)`;
+                cell.className = 'main-time-cell'; cell.style.width = `${state.cellWidth * MONTH_DAYS[state.focusMonth]}px`;
+                cell.innerText = `${state.focusMonth + 1}월 집중 스케일`;
                 cell.onclick = () => changeView('ALL');
                 g1.appendChild(cell);
 
                 let weeks = getWeeksMapOfMonth(state.focusMonth);
-                for (let d = 1; d <= conf.totalCells; d++) {
+                for (let d = 0; d < MONTH_DAYS[state.focusMonth]; d++) {
+                    let absDay = MONTH_STARTS[state.focusMonth] + d;
                     const sub = document.createElement('div'); sub.className = 'sub-tick-cell';
-                    sub.style.width = `${state.cellWidth}px`; 
-                    let yoil = getDayOfWeekString(state.focusMonth, d);
-                    sub.innerHTML = `${d}<span style="font-size:0.55rem;color:var(--text-muted);">(${yoil})</span>`;
+                    sub.style.width = `${state.cellWidth}px`;
+                    let yoil = getDayOfWeekString(absDay);
+                    sub.innerHTML = `${d + 1}<span style="font-size:0.55rem;color:var(--text-muted);">(${yoil})</span>`;
                     
-                    let targetWeekIdx = weeks.findIndex(w => w.includes(d));
-                    let targetDayIdx = weeks[targetWeekIdx].indexOf(d);
-                    sub.onclick = () => changeView('WEEK', state.focusMonth, targetWeekIdx);
+                    let wIdx = weeks.findIndex(w => w.includes(absDay));
+                    sub.onclick = () => changeView('WEEK', state.focusMonth, wIdx);
                     g2.appendChild(sub);
                 }
             } else if (state.viewMode === 'WEEK') {
@@ -317,15 +344,16 @@
 
                 const cell = document.createElement('div');
                 cell.className = 'main-time-cell'; cell.style.width = `${state.cellWidth * currentWeekDays.length}px`;
-                cell.innerText = `${state.focusMonth + 1}월 ${state.focusWeek + 1}주차 세부 일정`;
+                cell.innerText = `${state.focusMonth + 1}월 ${state.focusWeek + 1}주차 상세`;
                 cell.onclick = () => changeView('MONTH', state.focusMonth);
                 g1.appendChild(cell);
 
-                currentWeekDays.forEach((dayNum, dIdx) => {
+                currentWeekDays.forEach((absDay, dIdx) => {
                     const sub = document.createElement('div'); sub.className = 'sub-tick-cell';
                     sub.style.width = `${state.cellWidth}px`;
-                    let yoil = getDayOfWeekString(state.focusMonth, dayNum);
-                    sub.innerHTML = `${dayNum}일<span style="font-size:0.55rem;color:var(--text-muted);">(${yoil})</span>`;
+                    let dateNum = absDay - MONTH_STARTS[state.focusMonth] + 1;
+                    let yoil = getDayOfWeekString(absDay);
+                    sub.innerHTML = `${dateNum}일<span style="font-size:0.55rem;color:var(--text-muted);">(${yoil})</span>`;
                     sub.onclick = () => changeView('DAY', state.focusMonth, state.focusWeek, dIdx);
                     g2.appendChild(sub);
                 });
@@ -338,8 +366,7 @@
 
                     for(let m=0; m<12; m++) {
                         const sub = document.createElement('div'); sub.className = 'sub-tick-cell';
-                        sub.style.width = `${state.cellWidth}px`;
-                        sub.innerText = `${String(m*5).padStart(2, '0')}`;
+                        sub.style.width = `${state.cellWidth}px`; sub.innerText = `${String(m*5).padStart(2, '0')}`;
                         g2.appendChild(sub);
                     }
                 }
@@ -349,11 +376,13 @@
             wrapper.appendChild(row1); wrapper.appendChild(row2);
         }
 
-        // 🛠️ 항목간 인디케이터 스케일 내 여백 자동 역산 및 실시간 실제 항목 추가 엔진
+        // 🛠️ 여백 자동 역산 메우기 파트 (디폴트 텍스트 '휴식 및 정비' 탑재)
         function fillTimeGapsWithTasks() {
-            let conf = getGridConfig();
             let parentIds = [...new Set(state.tasks.map(t => t.parentId).filter(p => p !== null))];
             let createdAny = false;
+
+            // 기존 자동 생성되었던 여백 중 변경 안 된 기본 항목 지우고 재계산
+            state.tasks = state.tasks.filter(t => !t.id.startsWith('auto-gap-') || t.name !== '휴식 및 정비');
 
             parentIds.forEach(pId => {
                 let parent = state.tasks.find(t => t.id === pId);
@@ -363,17 +392,15 @@
                 if (children.length === 0) return;
 
                 let currentPointer = parent.start;
-
                 children.forEach(child => {
                     if (child.start > currentPointer) {
-                        // 여백 발견 -> 실제 하위 타임라인 항목 세트로 강제 자동 바인딩 추가
                         state.tasks.push({
                             id: "auto-gap-" + Date.now() + "-" + Math.random(),
                             parentId: pId,
-                            name: "[자동 생성 공정] 여백 채움",
+                            name: "휴식 및 정비", // 🛠️ 기본 플레이스홀더 텍스트 변경
                             start: currentPointer,
                             end: child.start,
-                            color: "#10b981",
+                            color: "auto-gap-emerald", 
                             checked: false
                         });
                         createdAny = true;
@@ -385,19 +412,17 @@
                     state.tasks.push({
                         id: "auto-gap-" + Date.now() + "-" + Math.random(),
                         parentId: pId,
-                        name: "[자동 생성 공정] 여백 채움",
+                        name: "휴식 및 정비",
                         start: currentPointer,
                         end: parent.end,
-                        color: "#10b981",
+                        color: "auto-gap-emerald",
                         checked: false
                     });
                     createdAny = true;
                 }
             });
 
-            if (createdAny) {
-                saveData();
-            }
+            if (createdAny) saveData();
         }
 
         function getDepth(task) {
@@ -412,7 +437,19 @@
             return false;
         }
 
-        // 🛠️ 하위 자식 목록의 궤적에 따라 부모 상위 항목 스케일을 칼같이 강제 동기화 (자석 자율 조절 연동형)
+        // 🛠️ 프로젝트 딜리게이트 하위 자식 목록만 스케일 트랙킹 필터 서브 시스템
+        function isFilteredByProjectFocus(task) {
+            if (!state.projectFocusId) return false;
+            if (task.id === state.projectFocusId) return false;
+            
+            let p = state.tasks.find(t => t.id === task.parentId);
+            while(p) {
+                if (p.id === state.projectFocusId) return false;
+                p = state.tasks.find(t => t.id === p.parentId);
+            }
+            return true;
+        }
+
         function updateParentTimeChain(parentId) {
             if (!parentId) return;
             let parent = state.tasks.find(t => t.id === parentId);
@@ -420,12 +457,8 @@
 
             let children = state.tasks.filter(t => t.parentId === parentId);
             if (children.length > 0) {
-                let minStart = Math.min(...children.map(c => c.start));
-                let maxEnd = Math.max(...children.map(c => c.end));
-
-                // 상위 항목은 독자적 변경 불가, 오직 자식의 시작/끝 경계선으로 동기화 자석화 처리
-                parent.start = minStart;
-                parent.end = maxEnd;
+                parent.start = Math.min(...children.map(c => c.start));
+                parent.end = Math.max(...children.map(c => c.end));
             }
             if (parent.parentId) updateParentTimeChain(parent.parentId);
         }
@@ -443,9 +476,11 @@
             const container = document.getElementById('dynamic-rows-container');
             container.innerHTML = '';
 
-            let conf = getGridConfig();
-            let sortedTasks = [...state.tasks].sort((a, b) => a.start - b.start);
+            let timeConfig = getActiveTimeRange();
+            let totalVisibleUnits = (state.viewMode === 'ALL') ? 52 : (timeConfig.end - timeConfig.start); 
+            if (state.viewMode === 'DAY') totalVisibleUnits = 288;
 
+            let sortedTasks = [...state.tasks].sort((a, b) => a.start - b.start);
             let treeSorted = [];
             function buildTree(pId) {
                 sortedTasks.filter(t => t.parentId === pId).forEach(t => {
@@ -455,14 +490,14 @@
             buildTree(null);
 
             treeSorted.forEach(task => {
-                let isParentNode = state.tasks.some(t => t.parentId === task.id);
+                if (isAncestorCollapsed(task) || isFilteredByProjectFocus(task)) return;
 
+                // 🛠️ 이번 4월 먹통 버그 원천 차단부: 현재 타임 슬롯 범위 내에 안 걸쳐져 있으면 행은 띄우되 인디케이터만 가드 처리
+                let isParentNode = state.tasks.some(t => t.parentId === task.id);
                 const row = document.createElement('div');
                 row.className = `task-row ${task.checked ? 'completed-shading' : ''}`;
-                if (isAncestorCollapsed(task)) row.classList.add('hidden-node');
 
                 const left = document.createElement('div'); left.className = 'task-left-panel';
-
                 let depth = getDepth(task);
                 for(let d=0; d<depth; d++) {
                     let space = document.createElement('span'); space.className = 'indent-space'; left.appendChild(space);
@@ -518,43 +553,89 @@
                 row.appendChild(left);
 
                 const rightTrack = document.createElement('div'); rightTrack.className = 'task-right-track';
-                rightTrack.style.width = `${conf.totalCells * state.cellWidth}px`;
+                rightTrack.style.width = `${totalVisibleUnits * state.cellWidth}px`;
 
-                for (let i = 0; i < conf.totalCells; i++) {
+                for (let i = 0; i < totalVisibleUnits; i++) {
                     const unit = document.createElement('div'); unit.className = 'track-grid-unit'; unit.style.width = `${state.cellWidth}px`;
                     rightTrack.appendChild(unit);
                 }
 
-                if (task.start < conf.totalCells && task.end > 0) {
-                    let dStart = Math.max(0, task.start);
-                    let dEnd = Math.min(conf.totalCells, task.end);
+                // 🛠️ 날짜 절대 좌표 매핑 렌더링 로직 연산부
+                let barRenderable = false;
+                let renderLeftCell = 0;
+                let renderWidthCells = 0;
+                let unitText = "";
 
-                    const bar = document.createElement('div'); bar.className = 'time-bar-element';
-                    bar.style.backgroundColor = task.color || '#3b82f6';
-                    bar.style.left = `${dStart * state.cellWidth}px`;
-                    bar.style.width = `${(dEnd - dStart) * state.cellWidth}px`;
+                if (state.viewMode === 'ALL') {
+                    // 전체 연간 뷰에서는 '주차(총 52~53개 단위)'로 압축 분할 매핑
+                    let totalYearWeeks = 52; 
+                    let sWeek = Math.floor((task.start / 365) * totalYearWeeks);
+                    let eWeek = Math.ceil((task.end / 365) * totalYearWeeks);
+                    if (sWeek < totalYearWeeks && eWeek > 0) {
+                        barRenderable = true;
+                        renderLeftCell = Math.max(0, sWeek);
+                        renderWidthCells = Math.min(totalYearWeeks, eWeek) - renderLeftCell;
+                        unitText = `${Math.ceil((task.end - task.start)/7)}주간`;
+                    }
+                } else if (state.viewMode === 'MONTH' || state.viewMode === 'WEEK') {
+                    // 일자별 절대값 교차 범위 연산
+                    let oStart = Math.max(timeConfig.start, task.start);
+                    let oEnd = Math.min(timeConfig.end, task.end);
+                    if (oStart < oEnd) {
+                        barRenderable = true;
+                        renderLeftCell = oStart - timeConfig.start;
+                        renderWidthCells = oEnd - oStart;
+                        unitText = `${task.end - task.start}일간`;
+                    }
+                } else if (state.viewMode === 'DAY') {
+                    if (task.start <= timeConfig.start && task.end > timeConfig.start) {
+                        barRenderable = true;
+                        renderLeftCell = 0;
+                        renderWidthCells = 288;
+                        unitText = "하루 종일";
+                    }
+                }
+
+                if (barRenderable && renderWidthCells > 0) {
+                    const bar = document.createElement('div'); 
+                    bar.className = 'time-bar-element';
+                    
+                    // 🛠️ 자동 여백 항목 전용 비주얼 클래스 바인딩 분리 분기문
+                    if (task.color === 'auto-gap-emerald') {
+                        bar.classList.add('auto-gap-bar');
+                    } else {
+                        bar.style.backgroundColor = task.color || '#3b82f6';
+                    }
+
+                    bar.style.left = `${renderLeftCell * state.cellWidth}px`;
+                    bar.style.width = `${renderWidthCells * state.cellWidth}px`;
 
                     const hL = document.createElement('div'); hL.className = 'resizer';
                     const lbl = document.createElement('div'); lbl.className = 'bar-label';
+                    lbl.innerHTML = `<span>⏳ ${task.name} (${unitText})</span>`;
                     
-                    let unitText = state.viewMode === 'DAY' ? `${(task.end - task.start)*5}분` : `${task.end - task.start}${conf.label}`;
-                    lbl.innerHTML = `<span>⏳ ${unitText}</span>`;
+                    // 🛠️ 레이블 클릭 시 해당 프로젝트 묶음 집중뷰로 대전환 트리거 추가
+                    lbl.onclick = (e) => {
+                        e.stopPropagation();
+                        if (isParentNode) {
+                            state.projectFocusId = task.id;
+                            saveData(); renderAll();
+                        }
+                    };
 
                     const hR = document.createElement('div'); hR.className = 'resizer';
 
-                    // 🛠️ 상위 부모 항목일 경우 인디케이터 임의 조절 봉인 (하위 항목으로만 제어 가능)
+                    // 🛠️ 피드백 반영: 상위 부모 항목은 좌우 조절 레버(hL, hR)를 비활성화하고 '가운데 잡고 드래그 이동'만 허용
                     if (!isParentNode) {
-                        bar.appendChild(hL);
-                        bar.appendChild(lbl);
-                        bar.appendChild(hR);
-
+                        bar.appendChild(hL); bar.appendChild(lbl); bar.appendChild(hR);
                         hL.onmousedown = (e) => { e.stopPropagation(); startDrag(task.id, 'left', e.clientX); };
                         hR.onmousedown = (e) => { e.stopPropagation(); startDrag(task.id, 'right', e.clientX); };
                         lbl.onmousedown = (e) => { e.stopPropagation(); if (e.buttons === 1) startDrag(task.id, 'move', e.clientX); };
                     } else {
-                        // 부모는 드래그 리사이징 불가능하게 가드 처리하고 레이블만 매핑
                         bar.appendChild(lbl);
-                        lbl.style.cursor = 'default';
+                        // 상위 항목 마우스 무브 드래그 허용 전환 부문
+                        lbl.style.cursor = 'move';
+                        lbl.onmousedown = (e) => { e.stopPropagation(); if (e.buttons === 1) startDrag(task.id, 'move', e.clientX); };
                     }
 
                     rightTrack.appendChild(bar);
@@ -580,9 +661,13 @@
 
         function onDragMove(e) {
             if (!currentDragId) return;
-            let conf = getGridConfig();
             let deltaX = e.clientX - dragStartX;
             let cellDelta = Math.round(deltaX / state.cellWidth);
+
+            // 날짜 연산 보정 배율 필터링 조정
+            if (state.viewMode === 'ALL') {
+                cellDelta = Math.round(cellDelta * (365 / 52));
+            }
 
             state.tasks = JSON.parse(JSON.stringify(originalTasksState));
             let task = state.tasks.find(t => t.id === currentDragId);
@@ -590,9 +675,10 @@
             if (dragType === 'move') {
                 let ns = dragStartS + cellDelta;
                 let ne = dragStartE + cellDelta;
-                if (ns >= 0 && ne <= conf.totalCells) { 
+                if (ns >= 0 && ne <= 365) { 
                     task.start = ns; 
                     task.end = ne; 
+                    // 🛠️ 상위 항목 전동 드래그 시 자식 하위 요소들 세트 동시 무브 연동 작동
                     moveAllChildrenSet(task.id, cellDelta);
                 }
             } else if (dragType === 'left') {
@@ -600,10 +686,10 @@
                 if (ns >= 0 && ns < task.end) task.start = ns;
             } else if (dragType === 'right') {
                 let ne = dragStartE + cellDelta;
-                if (ne > task.start && ne <= conf.totalCells) task.end = ne;
+                if (ne > task.start && ne <= 365) task.end = ne;
             }
 
-            // 부모 상하위 동기화 타임 트랙 역산
+            // 부모 연쇄 상하위 노드 강제 트랙 오토 연동 조율
             updateParentTimeChain(task.parentId);
             renderRows();
         }
@@ -613,34 +699,30 @@
             document.removeEventListener('mousemove', onDragMove);
             document.removeEventListener('mouseup', endDrag);
             
-            // 드래그 종료 시 빈 영역 체크 후 항목 생성 트리거
             fillTimeGapsWithTasks();
             saveData();
             renderAll(); 
         }
 
         function addNewRow() {
-            let conf = getGridConfig();
             state.tasks.push({
-                id: "t_" + Date.now(), parentId: null,
-                name: "새로운 최상위 마스터 공정", start: 0, end: Math.min(5, conf.totalCells),
+                id: "p_" + Date.now(), parentId: null,
+                name: "새로운 최상위 마스터 공정", start: 0, end: 45,
                 color: "#3b82f6", checked: false
             });
-            fillTimeGapsWithTasks();
-            saveData(); renderAll();
+            fillTimeGapsWithTasks(); saveData(); renderAll();
         }
 
         function addChildRow(pId) {
             let p = state.tasks.find(t => t.id === pId);
             state.tasks.push({
-                id: "t_" + Date.now(), parentId: pId,
-                name: "└ 세부 서브 태스크 라인", start: p.start, end: Math.min(p.end, p.start + 2),
+                id: "p_" + Date.now(), parentId: pId,
+                name: "└ 세부 서브 태스크 라인", start: p.start, end: Math.min(p.end, p.start + 15),
                 color: "#a855f7", checked: false
             });
             state.collapsedNodes[pId] = false;
             updateParentTimeChain(pId);
-            fillTimeGapsWithTasks();
-            saveData(); renderAll();
+            fillTimeGapsWithTasks(); saveData(); renderAll();
         }
 
         function renderArchive() {
