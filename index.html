@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🎬 On-Set Epic Master Timeline Pro</title>
+    <title>🎬 On-Set Tracker (촬영 마스터 플랜)</title>
     <style>
         :root {
             --bg-color: #0f172a;
@@ -15,7 +15,6 @@
             --primary-hover: #2563eb;
             --success-color: #10b981;
             --danger-color: #ef4444;
-            --break-color: #0d9488;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: sans-serif; user-select: none; }
@@ -28,10 +27,10 @@
 
         .title-container { display: flex; align-items: center; gap: 8px; }
         .title-input {
-            background: #0f172a; border: 1px solid var(--border-color); color: var(--text-color);
-            font-size: 1.2rem; font-weight: 700; padding: 6px 12px; border-radius: 6px; width: 340px;
+            background: transparent; border: 1px solid transparent; color: var(--text-color);
+            font-size: 1.2rem; font-weight: 700; padding: 6px 12px; border-radius: 6px; width: 340px; cursor: pointer;
         }
-        .title-input:disabled { background: transparent; border-color: transparent; }
+        .title-input:focus { background: #0f172a; border-color: var(--primary-color); outline: none; cursor: text; }
 
         .navigation-trail {
             display: flex; align-items: center; gap: 6px; font-size: 0.9rem; background: #0f172a; padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border-color);
@@ -42,56 +41,57 @@
         .control-panel { display: flex; gap: 8px; align-items: center; }
         button {
             background-color: var(--primary-color); color: white; border: none;
-            padding: 8px 14px; border-radius: 6px; font-size: 0.85rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;
+            padding: 8px 14px; border-radius: 6px; font-size: 0.85rem; font-weight: 600; cursor: pointer;
         }
         button:hover { background-color: var(--primary-hover); }
         button.secondary { background-color: #475569; }
-        button.secondary:hover { background-color: #334155; }
         button.danger { background-color: var(--danger-color); }
-        button.success { background-color: var(--success-color); }
 
-        /* 클래식 눈금 헤더 테이블 영역 */
-        .timeline-board { background: var(--card-bg); border-radius: 12px; border: 1px solid var(--border-color); overflow: hidden; margin-top: 5px; }
+        /* 타임라인 레이아웃 인프라 */
+        .timeline-board { background: var(--card-bg); border-radius: 12px; border: 1px solid var(--border-color); overflow: hidden; }
         .timeline-container-scroll { overflow-x: auto; width: 100%; }
         .timeline-table { display: flex; flex-direction: column; width: max-content; position: relative; }
 
         .table-header { display: flex; flex-direction: column; background: #111827; border-bottom: 2px solid var(--border-color); }
         .header-row { display: flex; }
         .header-frozen-zone {
-            width: 440px; min-width: 440px; padding-left: 15px; display: flex; align-items: center;
+            width: 380px; min-width: 380px; padding-left: 15px; display: flex; align-items: center;
             font-weight: bold; font-size: 0.85rem; color: var(--text-muted); border-right: 2px solid var(--border-color);
             background: #0f172a; position: sticky; left: 0; z-index: 25; height: 42px;
         }
         .header-grid-zone { display: flex; }
         
         .main-time-cell {
-            border-right: 2px solid var(--border-color); display: flex; align-items: center; justify-content: center;
-            font-size: 0.9rem; font-weight: bold; color: var(--text-color); background: #111827; height: 42px;
+            border-right: 2px solid var(--border-color); display: flex; flex-direction: column; align-items: center; justify-content: center;
+            font-size: 0.85rem; font-weight: bold; color: var(--text-color); background: #111827; height: 42px; cursor: pointer;
         }
+        .main-time-cell:hover { background: #1e293b; }
+        
         .sub-tick-row { display: flex; background: #0b0f19; height: 24px; border-bottom: 1px solid var(--border-color); }
         .sub-tick-cell {
             border-right: 1px dashed rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center;
             font-size: 0.65rem; color: var(--text-muted); font-family: monospace;
         }
 
-        /* 행 데이터 레벨 레이아웃 */
-        .task-row { display: flex; border-bottom: 1px solid var(--border-color); background: var(--card-bg); }
+        /* 항목 레벨 디자인 */
+        .task-row { display: flex; border-bottom: 1px solid var(--border-color); background: var(--card-bg); position: relative; }
+        .task-row.completed-shading { opacity: 0.35; background: #0f172a; } /* 체크 완료 시 음영 처리 */
+        
         .task-left-panel {
-            width: 440px; min-width: 440px; padding: 6px 12px; border-right: 2px solid var(--border-color);
-            display: flex; align-items: center; gap: 6px; background: #1e293b; position: sticky; left: 0; z-index: 15;
+            width: 380px; min-width: 380px; padding: 6px 12px; border-right: 2px solid var(--border-color);
+            display: flex; align-items: center; gap: 8px; background: #1e293b; position: sticky; left: 0; z-index: 15;
         }
 
-        .task-checkbox { width: 18px; height: 18px; cursor: pointer; }
+        .task-checkbox { width: 18px; height: 18px; cursor: pointer; z-index: 5; }
         
-        .color-dot-palette { display: flex; gap: 3px; margin-left: 4px; }
+        .color-dot-palette { display: flex; gap: 3px; }
         .color-dot { width: 10px; height: 10px; border-radius: 5px; cursor: pointer; border: 1px solid rgba(255,255,255,0.2); }
 
         .task-name-input {
             background: transparent; border: 1px solid transparent; color: var(--text-color);
-            font-size: 0.85rem; flex: 1; padding: 4px; border-radius: 4px; font-weight: bold;
+            font-size: 0.85rem; flex: 1; padding: 4px; border-radius: 4px; font-weight: bold; cursor: pointer;
         }
-        .task-name-input:disabled { color: var(--text-color); background: transparent; border-color: transparent; }
-        .task-name-input:focus { background: #0f172a; border-color: var(--primary-color); outline: none; }
+        .task-name-input:focus { background: #0f172a; border-color: var(--primary-color); outline: none; cursor: text; }
 
         .task-right-track { position: relative; display: flex; background: #0f172a; height: 52px; }
         .track-grid-unit { border-right: 1px dashed rgba(51, 65, 85, 0.3); height: 100%; }
@@ -100,39 +100,32 @@
         .time-bar-element {
             position: absolute; height: 34px; top: 9px;
             border-radius: 6px; display: flex; justify-content: space-between; align-items: center;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3); cursor: grab; transition: border 0.2s;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3); cursor: pointer;
         }
-        .time-bar-element:active { cursor: grabbing; }
-        .bar-label { flex: 1; text-align: center; font-size: 0.75rem; font-weight: 700; color: white; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; padding: 0 5px; }
+        .bar-label { flex: 1; text-align: center; font-size: 0.75rem; font-weight: 700; color: white; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; padding: 0 5px; height: 100%; display: flex; align-items: center; justify-content: center; }
         .resizer { width: 6px; height: 100%; background: rgba(255, 255, 255, 0.25); cursor: ew-resize; }
 
-        /* 자동 휴식 바 스타일 */
+        /* 자동 휴식 정비 바 */
         .time-bar-element.break-auto-bar {
-            background: repeating-linear-gradient(45deg, #0d9488, #0d9488 10px, #115e59 10px, #115e59 20px);
-            cursor: not-allowed; opacity: 0.75;
+            background: repeating-linear-gradient(45deg, #0d9488, #0d9488 10px, #115e59 10px, #115e59 20px) !important;
+            cursor: not-allowed; opacity: 0.6;
         }
 
-        /* 완료 목록 보관소 피드백 패널 */
-        .archive-section {
-            background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 15px; margin-top: 10px;
-        }
+        /* 완료 보관소 피드백 아코디언 */
+        .archive-section { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 15px; margin-top: 10px; }
         .archive-header { display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
         .archive-content { display: none; margin-top: 15px; border-top: 1px solid var(--border-color); padding-top: 10px; }
         .archive-content.open { display: block; }
-        .analysis-badge { background: #334155; padding: 4px 10px; border-radius: 6px; font-size: 0.8rem; font-weight: bold; color: #f59e0b; }
-        .archived-item { display: flex; justify-content: space-between; padding: 8px; border-bottom: 1px solid #334155; font-size: 0.85rem; }
+        .archived-item { display: flex; justify-content: space-between; align-items: center; padding: 8px; border-bottom: 1px solid #334155; font-size: 0.85rem; }
     </style>
 </head>
 <body>
 
     <header>
         <div class="title-container">
-            <input type="text" id="main-title" class="title-input" value="🎬 On-Set Tracker (촬영 마스터 플랜)" disabled>
-            <button id="lock-btn" class="secondary" style="padding:4px 8px;" onclick="toggleTitleLock()">수정</button>
-            <button id="cancel-title-btn" class="danger" style="padding:4px 8px; display:none;" onclick="cancelTitleEdit()">취소</button>
+            <input type="text" id="main-title" class="title-input" value="🎬 On-Set Tracker (촬영 마스터 플랜)">
         </div>
         
-        <!-- 무한 하향식 내비게이션 경로 트레일 -->
         <div class="navigation-trail" id="nav-trail-container"></div>
 
         <div class="control-panel">
@@ -152,126 +145,115 @@
         </div>
     </div>
 
-    <!-- 완료 목록 확인 및 누적 시간 추적 분석 피드백 보관함 -->
     <div class="archive-section">
         <div class="archive-header" onclick="toggleArchiveView()">
-            <h3>📦 완료된 항목 분석 보관함 (<span id="archive-count">0</span>개 항목 완료됨)</h3>
-            <div class="analysis-badge" id="total-feedback-stats">누적 분석 대기 중</div>
+            <h3>📦 완료된 항목 목록 (음영 처리 및 누적 추적)</h3>
+            <div style="background:#334155; padding:4px 10px; border-radius:6px; font-size:0.8rem; color:#f59e0b; font-weight:bold;" id="archive-count-badge">0개 완료</div>
         </div>
         <div class="archive-content" id="archive-content-panel"></div>
     </div>
 
     <script>
-        // 무한 뎁스 연결 맵 데이터베이스 구조
-        let dbState = {
-            currentParentId: null, // null이면 최상위 루트
-            viewScale: 'month',    // month, week, day, hour (진입한 위치의 시간 눈금 스케일)
+        // 고유 데이터 패키지 상태 관리
+        let state = {
+            year: 2026,
+            currentParentId: null, 
+            viewScale: 'year', // year(1~12월) -> month(주차) -> week(일차) -> day(24시) -> hour(5분)
+            selectedMonth: 0,  // 0~11
+            selectedWeek: 0,
+            selectedDay: 1,
+            selectedHour: 0,
+            cellWidth: 90,
             titleBackup: "",
-            rowBackup: {},
-            cellWidth: 100,
+            inputBackups: {},
             tasks: [
-                { id: "root-1", parentId: null, name: "수박 판매 메인 프로젝트 기획", start: 0, end: 3, color: "#3b82f6", checked: false, scale: "month" },
-                { id: "child-1", parentId: "root-1", name: "1단계 마켓 리서치 자료조사", start: 0, end: 2, color: "#a855f7", checked: false, scale: "week" },
-                { id: "subchild-1", parentId: "child-1", name: "온라인 정밀 트렌드 분석", start: 0, end: 2, color: "#eab308", checked: false, scale: "day" },
-                { id: "micro-1", parentId: "subchild-1", name: "네이버 쇼핑 데이터 랩 트래킹 및 파싱", start: 6, end: 12, color: "#10b981", checked: false, scale: "hour" }
+                { id: "t-1", parentId: null, name: "수박 판매 프로덕션 빌드업", start: 0, end: 3, color: "#3b82f6", checked: false },
+                { id: "t-2", parentId: "t-1", name: "시장 트렌드 분석 및 자료조사", start: 0, end: 2, color: "#a855f7", checked: false },
+                { id: "t-3", parentId: "t-2", name: "온라인 유통 채널 현황 조사", start: 1, end: 5, color: "#eab308", checked: false },
+                { id: "t-4", parentId: "t-3", name: "구글 트렌드 키워드 파싱 트래킹", start: 3, end: 9, color: "#10b981", checked: false }
             ]
         };
 
-        const PALETTE_COLORS = ["#3b82f6", "#a855f7", "#eab308", "#10b981", "#f97316"];
+        const PALETTE = ["#3b82f6", "#a855f7", "#eab308", "#10b981", "#ef4444"];
+        const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
 
         function init() {
-            const saved = localStorage.getItem('on_set_infinite_timeline_v5');
-            if (saved) dbState = JSON.parse(saved);
+            const saved = localStorage.getItem('onset_perfect_calendar_timeline_v6');
+            if (saved) state = JSON.parse(saved);
+            
+            setupTitleInput();
             renderTrail();
             renderAll();
         }
 
         function saveData() {
-            localStorage.setItem('on_set_infinite_timeline_v5', JSON.stringify(dbState));
-            updateArchiveStats();
+            localStorage.setItem('onset_perfect_calendar_timeline_v6', JSON.stringify(state));
+            renderArchive();
         }
 
-        // 상단 제목 잠금 및 원상복구 엔터 시스템
-        function toggleTitleLock() {
-            const input = document.getElementById('main-title');
-            const btn = document.getElementById('lock-btn');
-            const cBtn = document.getElementById('cancel-title-btn');
-
-            if (input.disabled) {
-                dbState.titleBackup = input.value;
-                input.disabled = false; input.focus();
-                btn.innerText = "완료"; cBtn.style.display = "inline";
-            } else {
-                input.disabled = true; btn.innerText = "수정"; cBtn.style.display = "none";
-                saveData();
-            }
+        // 엔터 미입력시 원상태 복귀(Blur Revert) 타이틀 기어
+        function setupTitleInput() {
+            const titleInput = document.getElementById('main-title');
+            titleInput.onfocus = () => { state.titleBackup = titleInput.value; };
+            titleInput.onblur = () => { titleInput.value = state.titleBackup; };
+            titleInput.onkeydown = (e) => {
+                if (e.key === 'Enter') {
+                    state.titleBackup = titleInput.value;
+                    titleInput.blur();
+                    saveData();
+                }
+            };
         }
 
-        function cancelTitleEdit() {
-            const input = document.getElementById('main-title');
-            const btn = document.getElementById('lock-btn');
-            const cBtn = document.getElementById('cancel-title-btn');
-            input.value = dbState.titleBackup;
-            input.disabled = true; btn.innerText = "수정"; cBtn.style.display = "none";
-        }
-
-        document.getElementById('main-title').onkeydown = function(e) {
-            if (e.key === 'Enter') toggleTitleLock();
-        };
-
-        // 🎬 최상위-하위 간 무한 유기적 매핑을 돕는 내비게이션 빌더
+        // 경로 트레일 뷰어
         function renderTrail() {
             const container = document.getElementById('nav-trail-container');
             container.innerHTML = '';
+            let html = `<span class="trail-link" onclick="jumpToScale('year')">🏠 ${state.year}년 마스터</span>`;
             
-            let html = `<span class="trail-link" onclick="drillUpTo(null, 'month')">🏠 마스터 홈(개월)</span>`;
+            if (state.viewScale !== 'year') html += ` <span>&gt;</span> <span class="trail-link" onclick="jumpToScale('month', ${state.selectedMonth})">${state.selectedMonth + 1}월</span>`;
+            if (['week', 'day', 'hour'].includes(state.viewScale)) html += ` <span>&gt;</span> <span class="trail-link" onclick="jumpToScale('week', ${state.selectedMonth}, ${state.selectedWeek})">${state.selectedWeek + 1}주차</span>`;
+            if (['day', 'hour'].includes(state.viewScale)) html += ` <span>&gt;</span> <span class="trail-link" onclick="jumpToScale('day', ${state.selectedMonth}, ${state.selectedWeek}, ${state.selectedDay})">${state.selectedDay}일</span>`;
+            if (state.viewScale === 'hour') html += ` <span>&gt;</span> <span class="trail-link">${state.selectedHour}시 (5분 단위)</span>`;
             
-            let chain = [];
-            let pId = dbState.currentParentId;
-            while(pId) {
-                let curr = dbState.tasks.find(t => t.id === pId);
-                if(curr) {
-                    chain.unshift(curr);
-                    pId = curr.parentId;
-                } else break;
-            }
-
-            chain.forEach(node => {
-                html += ` <span>&gt;</span> <span class="trail-link" onclick="drillUpTo('${node.id}', '${node.scale}')">${node.name}</span>`;
-            });
             container.innerHTML = html;
         }
 
-        function drillUpTo(id, parentScale) {
-            dbState.currentParentId = id;
-            if (id === null) dbState.viewScale = 'month';
-            else {
-                if (parentScale === 'month') dbState.viewScale = 'week';
-                else if (parentScale === 'week') dbState.viewScale = 'day';
-                else if (parentScale === 'day') dbState.viewScale = 'hour';
-            }
+        function jumpToScale(scale, m=0, w=0, d=1, h=0) {
+            state.viewScale = scale;
+            state.selectedMonth = m; state.selectedWeek = w; state.selectedDay = d; state.selectedHour = h;
             renderTrail(); renderAll();
         }
 
-        function getScaleMaxCells() {
-            if (dbState.viewScale === 'month') return 12; // 1~12 개월
-            if (dbState.viewScale === 'week') return 4;  // 1~4 주차
-            if (dbState.viewScale === 'day') return 7;   // 1~7 일차
-            if (dbState.viewScale === 'hour') return 12 * 6; // 6시간 스케일 분할 (1칸당 10분 단위 세부 분할 = 총 72칸)
+        // 📅 실제 달력 연동 기반 동적 칸 배열 연산 엔진
+        function getDaysInMonth(year, month) { return new Date(year, month + 1, 0).getDate(); }
+        
+        function getWeeksInMonth(year, month) {
+            const firstDay = new Date(year, month, 1).getDay();
+            const totalDays = getDaysInMonth(year, month);
+            return Math.ceil((totalDays + firstDay) / 7);
+        }
+
+        function getMaxCells() {
+            if (state.viewScale === 'year') return 12; // 1~12월
+            if (state.viewScale === 'month') return getWeeksInMonth(state.year, state.selectedMonth); // 실제 월 주차
+            if (state.viewScale === 'week') return 7; // 7일간
+            if (state.viewScale === 'day') return 24; // 24시간
+            if (state.viewScale === 'hour') return 12; // 1시간 속 5분 단위 = 12칸
             return 12;
         }
 
-        // ⏱️ 소요 할애 시간 텍스트 포맷 기어
-        function getDurationText(start, end) {
-            let units = end - start;
-            if (dbState.viewScale === 'month') return `${units}개월`;
-            if (dbState.viewScale === 'week') return `${units}주`;
-            if (dbState.viewScale === 'day') return `${units}일`;
-            if (dbState.viewScale === 'hour') return `${units * 10}분`;
-            return `${units}칸`;
+        function getDurationLabel(start, end) {
+            let diff = end - start;
+            if (state.viewScale === 'year') return `${diff}개월`;
+            if (state.viewScale === 'month') return `${diff}주`;
+            if (state.viewScale === 'week') return `${diff}일`;
+            if (state.viewScale === 'day') return `${diff}시간`;
+            if (state.viewScale === 'hour') return `${diff * 5}분`;
+            return `${diff}칸`;
         }
 
-        // 📐 클래식 10분 단위 세부 눈금 헤더 완벽 렌더러
+        // 📐 클래식 눈금 헤더 완벽 렌더러 (프레임 클릭 이동 내장)
         function renderHeader() {
             const wrapper = document.getElementById('master-render-header');
             wrapper.innerHTML = '';
@@ -280,172 +262,170 @@
             const row2 = document.createElement('div'); row2.className = 'header-row';
 
             const f1 = document.createElement('div'); f1.className = 'header-frozen-zone'; f1.innerText = "진행 단계 / 컷 목록";
-            const f2 = document.createElement('div'); f2.className = 'header-frozen-zone'; f2.innerText = "5분 단위 세부 눈금 (10분 가이드)";
+            const f2 = document.createElement('div'); f2.className = 'header-frozen-zone'; f2.innerText = "5분 단위 세부 눈금 눈설정";
             row1.appendChild(f1); row2.appendChild(f2);
 
             const g1 = document.createElement('div'); g1.className = 'header-grid-zone';
             const g2 = document.createElement('div'); g2.className = 'header-grid-zone';
 
-            let cells = getScaleMaxCells();
+            let cells = getMaxCells();
 
-            if (dbState.viewScale === 'hour') {
-                // 1시간 블록 = 6칸 (각 10분)
-                for (let h = 0; h < 6; h++) {
-                    const mCell = document.createElement('div'); mCell.className = 'main-time-cell';
-                    mCell.style.width = `${dbState.cellWidth * 12}px`;
-                    mCell.innerText = `오전 ${8 + h}시`;
-                    g1.appendChild(mCell);
+            for (let i = 0; i < cells; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'main-time-cell';
+                cell.style.width = `${state.cellWidth}px`;
 
-                    for (let m = 0; m < 12; m++) {
-                        const sCell = document.createElement('div'); sCell.className = 'sub-tick-cell';
-                        sCell.style.width = `${dbState.cellWidth}px`;
-                        sCell.innerText = `${m === 0 ? '00' : m * 5}분`;
-                        g2.appendChild(sCell);
-                    }
-                }
-            } else {
-                for (let i = 0; i < cells; i++) {
-                    const mCell = document.createElement('div'); mCell.className = 'main-time-cell';
-                    mCell.style.width = `${dbState.cellWidth}px`;
+                const subTick = document.createElement('div');
+                subTick.className = 'sub-tick-cell';
+                subTick.style.width = `${state.cellWidth}px`;
+                subTick.innerText = "••";
+
+                if (state.viewScale === 'year') {
+                    cell.innerText = `${i+1}월`;
+                    cell.onclick = () => jumpToScale('month', i);
+                } 
+                else if (state.viewScale === 'month') {
+                    cell.innerText = `${i+1}주차`;
+                    cell.onclick = () => jumpToScale('week', state.selectedMonth, i);
+                } 
+                else if (state.viewScale === 'week') {
+                    // 실제 달력 요일 계산 매핑
+                    let startOffset = new Date(state.year, state.selectedMonth, 1).getDay();
+                    let targetDay = (state.selectedWeek * 7) + i + 1 - startOffset;
+                    let maxDays = getDaysInMonth(state.year, state.selectedMonth);
                     
-                    if (dbState.viewScale === 'month') mCell.innerText = `${i+1}개월`;
-                    else if (dbState.viewScale === 'week') mCell.innerText = `${i+1}주차`;
-                    else if (dbState.viewScale === 'day') mCell.innerText = `${i+1}일차`;
-
-                    g1.appendChild(mCell);
-
-                    const sCell = document.createElement('div'); sCell.className = 'sub-tick-cell';
-                    sCell.style.width = `${dbState.cellWidth}px`;
-                    sCell.innerText = `✓`;
-                    g2.appendChild(sCell);
+                    if (targetDay > 0 && targetDay <= maxDays) {
+                        let dayObj = new Date(state.year, state.selectedMonth, targetDay);
+                        cell.innerText = `${targetDay}일(${WEEKDAYS[dayObj.getDay()]})`;
+                        cell.onclick = () => jumpToScale('day', state.selectedMonth, state.selectedWeek, targetDay);
+                    } else {
+                        cell.innerText = "-";
+                        cell.style.opacity = "0.3";
+                    }
+                } 
+                else if (state.viewScale === 'day') {
+                    cell.innerText = `${i}시`;
+                    cell.onclick = () => jumpToScale('hour', state.selectedMonth, state.selectedWeek, state.selectedDay, i);
+                } 
+                else if (state.viewScale === 'hour') {
+                    cell.innerText = `${i * 5}분`;
+                    subTick.innerText = "5m";
                 }
+
+                g1.appendChild(cell);
+                g2.appendChild(subTick);
             }
 
             row1.appendChild(g1); row2.appendChild(g2);
             wrapper.appendChild(row1); wrapper.appendChild(row2);
         }
 
-        // 타임라인 리스트 및 여백 휴식 정비 자동 연산 처리 엔진
+        // 타임라인 보드 렌더러 (자동 휴식 및 Revert 포커스 아웃 엔진 장착)
         function renderRows() {
             const container = document.getElementById('dynamic-rows-container');
             container.innerHTML = '';
 
-            let currentLevelTasks = dbState.tasks.filter(t => t.parentId === dbState.currentParentId && !t.checked);
-            let totalCells = getScaleMaxCells();
-
-            if (currentLevelTasks.length === 0) {
-                container.innerHTML = `<div style="padding: 20px; text-align: center; color: var(--text-muted);">이 레벨에 생성된 세부 액션 아이템이 없습니다. 우측 상단 버튼으로 추가해 주세요.</div>`;
-                return;
-            }
+            let currentLevelTasks = state.tasks.filter(t => t.parentId === state.currentParentId);
+            let totalCells = getMaxCells();
 
             currentLevelTasks.forEach(task => {
-                const row = document.createElement('div'); row.className = 'task-row';
+                const row = document.createElement('div'); 
+                row.className = `task-row ${task.checked ? 'completed-shading' : ''}`; // 완료 음영 비활성화 스타일 적용
 
-                // 왼쪽 설정 패널
                 const left = document.createElement('div'); left.className = 'task-left-panel';
 
+                // 체크박스 핸들러
                 const cb = document.createElement('input'); cb.type = 'checkbox'; cb.className = 'task-checkbox';
                 cb.checked = task.checked;
-                cb.onchange = () => { task.checked = cb.checked; saveData(); renderAll(); };
+                cb.onchange = () => { task.checked = cb.checked; saveData(); renderRows(); };
                 left.appendChild(cb);
 
-                // 컬러 팰릿 복원
+                // 컬러 팰릿 
                 const pal = document.createElement('div'); pal.className = 'color-dot-palette';
-                PALETTE_COLORS.forEach(c => {
+                PALETTE.forEach(c => {
                     const dot = document.createElement('div'); dot.className = 'color-dot'; dot.style.backgroundColor = c;
                     dot.onclick = () => { task.color = c; saveData(); renderRows(); };
                     pal.appendChild(dot);
                 });
                 left.appendChild(pal);
 
-                // 엔터 및 취소 기능 연동 텍스트 인풋 가드
+                // 엔터 안누르면 이전 상태 복귀형 인풋 필더(Blur 디폴트화)
                 const nameInput = document.createElement('input'); nameInput.className = 'task-name-input';
-                nameInput.value = task.name; nameInput.disabled = true;
+                nameInput.value = task.name;
                 
+                nameInput.onfocus = () => { state.inputBackups[task.id] = nameInput.value; };
+                nameInput.onblur = () => { nameInput.value = state.inputBackups[task.id]; }; // 포커스 잃으면 복귀
                 nameInput.onkeydown = (e) => {
-                    if (e.key === 'Enter') saveRowEdit(task.id, nameInput);
+                    if (e.key === 'Enter') {
+                        state.inputBackups[task.id] = nameInput.value; // 변경값 박제
+                        task.name = nameInput.value;
+                        nameInput.blur();
+                        saveData();
+                        renderRows();
+                    }
                 };
                 left.appendChild(nameInput);
 
-                const editBtn = document.createElement('button'); editBtn.className = 'secondary'; editBtn.style.padding = '3px 6px'; editBtn.innerText = "수정";
-                const cancelBtn = document.createElement('button'); cancelBtn.className = 'danger'; cancelBtn.style.padding = '3px 6px'; cancelBtn.style.display = 'none'; cancelBtn.innerText = "취소";
-
-                editBtn.onclick = () => {
-                    if (nameInput.disabled) {
-                        dbState.rowBackup[task.id] = nameInput.value;
-                        nameInput.disabled = false; nameInput.focus(); editBtn.innerText = "완료"; cancelBtn.style.display = 'inline';
-                    } else {
-                        saveRowEdit(task.id, nameInput);
-                        editBtn.innerText = "수정"; cancelBtn.style.display = 'none';
-                    }
-                };
-
-                cancelBtn.onclick = () => {
-                    nameInput.value = dbState.rowBackup[task.id];
-                    nameInput.disabled = true; editBtn.innerText = "수정"; cancelBtn.style.display = 'none';
-                };
-
-                left.appendChild(editBtn); left.appendChild(cancelBtn);
-
-                // 하위 단계로 다이빙 탐색 확장 진입 버튼
-                const drillBtn = document.createElement('button'); drillBtn.className = 'success'; drillBtn.style.padding = '3px 8px'; drillBtn.innerText = "🔍 진입";
-                drillBtn.onclick = () => {
-                    dbState.currentParentId = task.id;
-                    if (task.scale === 'month') dbState.viewScale = 'week';
-                    else if (task.scale === 'week') dbState.viewScale = 'day';
-                    else if (task.scale === 'day') dbState.viewScale = 'hour';
-                    renderTrail(); renderAll();
-                };
-                left.appendChild(drillBtn);
-
-                const delBtn = document.createElement('button'); delBtn.className = 'danger'; delBtn.style.padding = '3px 6px'; delBtn.innerText = "✕";
-                delBtn.onclick = () => { if(confirm("삭제하시겠습니까?")) { dbState.tasks = dbState.tasks.filter(t => t.id !== task.id); saveData(); renderAll(); } };
+                const delBtn = document.createElement('button'); delBtn.className = 'danger'; delBtn.style.padding = '3px 7px'; delBtn.innerText = "✕";
+                delBtn.onclick = () => { state.tasks = state.tasks.filter(t => t.id !== task.id); saveData(); renderAll(); };
                 left.appendChild(delBtn);
 
                 row.appendChild(left);
 
-                // 우측 타임라인 그리드 트랙 및 바 형성 영역
+                // 우측 타임라인 채우기
                 const rightTrack = document.createElement('div'); rightTrack.className = 'task-right-track';
-                let renderMax = (dbState.viewScale === 'hour') ? 72 : totalCells;
-                rightTrack.style.width = `${renderMax * dbState.cellWidth}px`;
+                rightTrack.style.width = `${totalCells * state.cellWidth}px`;
 
-                for (let i = 0; i < renderMax; i++) {
-                    const unit = document.createElement('div'); unit.className = 'track-grid-unit'; unit.style.width = `${dbState.cellWidth}px`;
+                for (let i = 0; i < totalCells; i++) {
+                    const unit = document.createElement('div'); unit.className = 'track-grid-unit'; unit.style.width = `${state.cellWidth}px`;
                     rightTrack.appendChild(unit);
                 }
 
-                // ☕ 공백 자동 계산 알고리즘 기반 [자동] 휴식 및 정비 시간 오버레이 채우기
+                // [자동] 휴식 및 촬영 정비 시간 왼쪽 여백 채우기
                 if (task.start > 0) {
                     const breakBar = document.createElement('div'); breakBar.className = 'time-bar-element break-auto-bar';
-                    breakBar.style.left = `0px`; breakBar.style.width = `${task.start * dbState.cellWidth}px`;
-                    breakBar.innerHTML = `<div class="bar-label">☕ [자동] 휴식 및 촬영 정비 시간 (${getDurationText(0, task.start)})</div>`;
+                    breakBar.style.left = `0px`; breakBar.style.width = `${task.start * state.cellWidth}px`;
+                    breakBar.innerHTML = `<div class="bar-label">☕ [자동] 휴식 시간 (${getDurationLabel(0, task.start)})</div>`;
                     rightTrack.appendChild(breakBar);
                 }
 
-                // 실제 스케줄 인디케이터 메인 바
+                // 메인 스케줄 바 인디케이터 (클릭시 하위 단계 진입 인터페이스 장착)
                 const bar = document.createElement('div'); bar.className = 'time-bar-element';
                 bar.style.backgroundColor = task.color || '#3b82f6';
-                bar.style.left = `${task.start * dbState.cellWidth}px`;
-                bar.style.width = `${(task.end - task.start) * dbState.cellWidth}px`;
+                bar.style.left = `${task.start * state.cellWidth}px`;
+                bar.style.width = `${(task.end - task.start) * state.cellWidth}px`;
 
                 const hL = document.createElement('div'); hL.className = 'resizer';
+                
+                // 라벨 필드 
                 const lbl = document.createElement('div'); lbl.className = 'bar-label';
-                lbl.innerHTML = `<span>${getDurationText(task.start, task.end)}</span> | <span>${task.name}</span> <small style="opacity:0.6;font-size:0.65rem;">(Alt+드래그 복제)</small>`;
+                lbl.innerHTML = `<span>[${getDurationLabel(task.start, task.end)}] ${task.name} (클릭시 내부 진입)</span>`;
+                
+                // 📍 인디케이터 바 클릭시 다이렉트 하위 뎁스 스케일 이동
+                lbl.onclick = (e) => {
+                    e.stopPropagation();
+                    state.currentParentId = task.id;
+                    if (state.viewScale === 'year') jumpToScale('month', task.start);
+                    else if (state.viewScale === 'month') jumpToScale('week', state.selectedMonth, task.start);
+                    else if (state.viewScale === 'week') jumpToScale('day', state.selectedMonth, state.selectedWeek, task.start + 1);
+                    else if (state.viewScale === 'day') jumpToScale('hour', state.selectedMonth, state.selectedWeek, state.selectedDay, task.start);
+                };
+
                 const hR = document.createElement('div'); hR.className = 'resizer';
 
                 bar.appendChild(hL); bar.appendChild(lbl); bar.appendChild(hR);
 
-                hL.onmousedown = (e) => { e.stopPropagation(); startDragEngine(task.id, 'left', e); };
-                hR.onmousedown = (e) => { e.stopPropagation(); startDragEngine(task.id, 'right', e); };
-                lbl.onmousedown = (e) => { e.stopPropagation(); startDragEngine(task.id, 'move', e); };
+                hL.onmousedown = (e) => { e.stopPropagation(); startDrag(task.id, 'left', e.clientX); };
+                hR.onmousedown = (e) => { e.stopPropagation(); startDrag(task.id, 'right', e.clientX); };
+                lbl.onmousedown = (e) => { e.stopPropagation(); if (e.altKey || e.buttons === 1 && e.movementX !== 0) startDrag(task.id, 'move', e.clientX); };
 
                 rightTrack.appendChild(bar);
 
-                // 뒤쪽 여백 휴식 자동 채우기
-                if (task.end < renderMax) {
+                // [자동] 휴식 및 촬영 정비 시간 오른쪽 여백 채우기
+                if (task.end < totalCells) {
                     const breakBarEnd = document.createElement('div'); breakBarEnd.className = 'time-bar-element break-auto-bar';
-                    breakBarEnd.style.left = `${task.end * dbState.cellWidth}px`; breakBarEnd.style.width = `${(renderMax - task.end) * dbState.cellWidth}px`;
-                    breakBarEnd.innerHTML = `<div class="bar-label">☕ [자동] 휴식 및 촬영 정비 시간 (${getDurationText(task.end, renderMax)})</div>`;
+                    breakBarEnd.style.left = `${task.end * state.cellWidth}px`; breakBarEnd.style.width = `${(totalCells - task.end) * state.cellWidth}px`;
+                    breakBarEnd.innerHTML = `<div class="bar-label">☕ [자동] 휴식 시간 (${getDurationLabel(task.end, totalCells)})</div>`;
                     rightTrack.appendChild(breakBarEnd);
                 }
 
@@ -454,44 +434,23 @@
             });
         }
 
-        function saveRowEdit(id, inputElement) {
-            let task = dbState.tasks.find(t => t.id === id);
-            if (task) { task.name = inputElement.value; saveData(); }
-            inputElement.disabled = true; renderRows();
-        }
-
-        // 🏎️ Alt 키 복제 매커니즘이 탑재된 드래그 제어 가속 컴포넌트
-        function startDragEngine(id, type, event) {
-            let targetId = id;
-            
-            // Alt 키를 누른 상태에서 드래그 조작을 시도할 경우 원본 손상 없이 정밀 즉시 복제
-            if (event.altKey && type === 'move') {
-                let original = dbState.tasks.find(t => t.id === id);
-                let cloneId = "clone_" + Date.now();
-                dbState.tasks.push({
-                    ...original,
-                    id: cloneId,
-                    name: `${original.name} (복제본)`
-                });
-                targetId = cloneId;
-                saveData();
-            }
-
-            currentDragBarId = targetId; dragType = type; dragStartX = event.clientX;
-            let task = dbState.tasks.find(t => t.id === targetId);
+        // 드래그앤드롭 트래킹 허브
+        function startDrag(id, type, x) {
+            currentDragBarId = id; dragType = type; dragStartX = x;
+            let task = state.tasks.find(t => t.id === id);
             dragStartLeft = task.start; dragStartEnd = task.end;
 
-            document.addEventListener('mousemove', onDragEngineMove);
-            document.addEventListener('mouseup', endDragEngine);
+            document.addEventListener('mousemove', onDragMove);
+            document.addEventListener('mouseup', endDrag);
         }
 
-        function onDragEngineMove(e) {
+        function onDragMove(e) {
             if (!currentDragBarId) return;
-            let task = dbState.tasks.find(t => t.id === currentDragBarId);
-            let totalCells = (dbState.viewScale === 'hour') ? 72 : getScaleMaxCells();
+            let task = state.tasks.find(t => t.id === currentDragBarId);
+            let totalCells = getMaxCells();
 
             let deltaX = e.clientX - dragStartX;
-            let cellDelta = Math.round(deltaX / dbState.cellWidth);
+            let cellDelta = Math.round(deltaX / state.cellWidth);
 
             if (dragType === 'move') {
                 let ns = dragStartLeft + cellDelta;
@@ -507,65 +466,57 @@
             renderRows();
         }
 
-        function endDragEngine() {
+        function endDrag() {
             currentDragBarId = null;
-            document.removeEventListener('mousemove', onDragEngineMove);
-            document.removeEventListener('mouseup', endDragEngine);
+            document.removeEventListener('mousemove', onDragMove);
+            document.removeEventListener('mouseup', endDrag);
             saveData(); renderRows();
         }
 
         function addNewRow() {
-            let nextScale = 'month';
-            if (dbState.viewScale === 'month') nextScale = 'week';
-            else if (dbState.viewScale === 'week') nextScale = 'day';
-            else if (dbState.viewScale === 'day') nextScale = 'hour';
-
-            dbState.tasks.push({
-                id: "task_" + Date.now(),
-                parentId: dbState.currentParentId,
-                name: "새 촬영 세부 플랜 액션 아이템 기입",
+            state.tasks.push({
+                id: "t_" + Date.now(),
+                parentId: state.currentParentId,
+                name: "새 촬영 세부 작업 플랜 항목 명칭 기입",
                 start: 0,
-                end: (dbState.viewScale === 'hour') ? 6 : 2,
+                end: 2,
                 color: "#3b82f6",
-                checked: false,
-                scale: nextScale
+                checked: false
             });
-            saveData(); renderAll();
+            saveData(); renderRows();
         }
 
-        // 📦 완료 피드백 대시보드 통계 계산 연산 루틴
-        function updateArchiveStats() {
+        // 📦 완료 보관소 리스트 빌더 및 상호 완벽 복원 기어
+        function renderArchive() {
             const container = document.getElementById('archive-content-panel');
-            const countSpan = document.getElementById('archive-count');
-            const statsBadge = document.getElementById('total-feedback-stats');
+            const badge = document.getElementById('archive-count-badge');
             
-            let completedList = dbState.tasks.filter(t => t.checked);
-            countSpan.innerText = completedList.length;
+            let completed = state.tasks.filter(t => t.checked);
+            badge.innerText = `${completed.length}개 완료`;
 
-            if (completedList.length === 0) {
-                container.innerHTML = `<div style="color: var(--text-muted); text-align: center;">아직 완료된 업무가 없습니다. 체크박스를 누르면 여기에 분석 보고서가 쌓여요.</div>`;
-                statsBadge.innerText = "누적 분석 대기 중";
+            if (completed.length === 0) {
+                container.innerHTML = `<div style="text-align:center; color:var(--text-muted);">현재 완료 보관함이 비어있습니다.</div>`;
                 return;
             }
 
-            let summary = {};
             let html = '';
-            
-            completedList.forEach(t => {
-                let dur = t.end - t.start;
-                let scaleLabel = t.scale === 'week' ? '개월' : (t.scale === 'day' ? '주' : (t.scale === 'hour' ? '일' : '분'));
-                let displayDur = t.scale === 'hour' ? `${dur * 10}분` : `${dur}${scaleLabel}`;
-                
+            completed.forEach(task => {
                 html += `
                     <div class="archived-item">
-                        <span>✅ <strong>${t.name}</strong> (소속 ID: ${t.parentId || '최상위 마스터'})</span>
-                        <span style="color: var(--success-color); font-weight: bold;">할애된 시간: ${displayDur}</span>
+                        <span>🟩 <strong>${task.name}</strong></span>
+                        <button class="secondary" style="padding:4px 8px; font-size:0.75rem;" onclick="restoreTask('${task.id}')">🔄 보관함 복원</button>
                     </div>
                 `;
             });
-            
             container.innerHTML = html;
-            statsBadge.innerText = `🔥 총 ${completedList.length}개 액션 분석 피드백 완료`;
+        }
+
+        function restoreTask(id) {
+            let task = state.tasks.find(t => t.id === id);
+            if (task) {
+                task.checked = false; // 체크를 해제하여 원래 타임라인에서 원상복구 활성화
+                saveData(); renderRows();
+            }
         }
 
         function toggleArchiveView() {
@@ -573,12 +524,12 @@
         }
 
         function adjustZoom(amt) {
-            dbState.cellWidth = Math.max(30, Math.min(200, dbState.cellWidth + amt));
+            state.cellWidth = Math.max(40, Math.min(250, state.cellWidth + amt));
             renderAll();
         }
 
         function resetAllData() {
-            if (confirm("정말 전체 인프라를 포맷하고 새로 짤까요?")) {
+            if (confirm("마스터 데이터가 영구 초기화됩니다.")) {
                 localStorage.clear(); location.reload();
             }
         }
@@ -586,6 +537,7 @@
         function renderAll() {
             renderHeader();
             renderRows();
+            renderArchive();
         }
 
         window.onload = init;
