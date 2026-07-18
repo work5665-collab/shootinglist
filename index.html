@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🎬 마스터 프로덕션 타임라인 시스템</title>
+    <title>🎬 하이퍼 스케일 프로덕션 타임라인</title>
     <style>
         :root {
             --bg-color: #0f172a;
@@ -16,530 +16,199 @@
             --success-color: #10b981;
             --danger-color: #ef4444;
             --accent-color: #f59e0b;
-            --break-color: #475569;
         }
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: "Pretendard", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
-            user-select: none;
-        }
-
-        body {
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: sans-serif; user-select: none; }
+        body { background-color: var(--bg-color); color: var(--text-color); padding: 20px; display: flex; flex-direction: column; gap: 15px; }
 
         header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: var(--card-bg);
-            padding: 15px 20px;
-            border-radius: 12px;
-            border: 1px solid var(--border-color);
+            display: flex; justify-content: space-between; align-items: center;
+            background: var(--card-bg); padding: 15px 20px; border-radius: 12px; border: 1px solid var(--border-color);
         }
 
-        .title-container {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            flex: 1;
-        }
-
+        .title-container { display: flex; align-items: center; gap: 10px; }
         .title-input {
-            background: transparent;
-            border: 1px solid transparent;
-            color: var(--text-color);
-            font-size: 1.4rem;
-            font-weight: 700;
-            padding: 2px 8px;
-            border-radius: 6px;
-            min-width: 300px;
-            display: inline-block;
-        }
-        .title-input:not(:disabled) {
-            background: #0f172a;
-            border-color: var(--primary-color);
+            background: #0f172a; border: 1px solid var(--border-color); color: var(--text-color);
+            font-size: 1.2rem; font-weight: 700; padding: 6px 12px; border-radius: 6px;
+            max-width: 400px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
         }
 
-        .lock-btn {
-            background: #334155;
-            border: none;
-            color: white;
-            padding: 6px 12px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 0.85rem;
-            white-space: nowrap;
+        /* 📍 상단 헤더 경로 내비게이션 (Breadcrumb) */
+        .breadcrumb-trail {
+            display: flex; align-items: center; gap: 8px; background: #0f172a;
+            padding: 8px 16px; border-radius: 8px; border: 1px solid var(--border-color); font-size: 0.9rem;
         }
+        .crumb-item { color: var(--accent-color); cursor: pointer; font-weight: bold; }
+        .crumb-item:hover { text-decoration: underline; }
+        .crumb-separator { color: var(--text-muted); }
 
-        .control-panel {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        button, select, input[type="number"] {
-            background-color: var(--primary-color);
-            color: white;
-            border: none;
-            padding: 8px 12px;
-            border-radius: 6px;
-            font-size: 0.85rem;
-            font-weight: 600;
-            cursor: pointer;
+        .control-panel { display: flex; gap: 8px; }
+        button {
+            background-color: var(--primary-color); color: white; border: none;
+            padding: 8px 14px; border-radius: 6px; font-size: 0.85rem; font-weight: 600; cursor: pointer;
         }
         button:hover { background-color: var(--primary-hover); }
         button.secondary { background-color: #475569; }
         button.secondary:hover { background-color: #334155; }
         button.danger { background-color: var(--danger-color); }
-        
-        select, input[type="number"] {
-            background-color: #1e293b;
-            border: 1px solid var(--border-color);
-            color: white;
-        }
-        input[type="number"] {
-            width: 60px;
-            text-align: center;
-        }
 
-        .settings-bar {
-            background: var(--card-bg);
-            padding: 12px 20px;
-            border-radius: 12px;
-            border: 1px solid var(--border-color);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 15px;
-        }
-
-        .flex-group {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 0.9rem;
-        }
-
-        /* 타임라인 메인 구조 */
         .timeline-board {
-            background: var(--card-bg);
-            border-radius: 12px;
-            border: 1px solid var(--border-color);
-            overflow: hidden;
+            background: var(--card-bg); border-radius: 12px; border: 1px solid var(--border-color); overflow: hidden;
         }
+        .timeline-container-scroll { overflow-x: auto; width: 100%; }
+        .timeline-table { display: flex; flex-direction: column; width: max-content; position: relative; }
 
-        .timeline-container-scroll {
-            overflow-x: auto;
-            width: 100%;
-        }
-
-        .timeline-table {
-            display: flex;
-            flex-direction: column;
-            position: relative;
-            width: max-content;
-        }
-
-        /* 🎬 2줄 계층형 헤더 스타일 */
-        .table-header {
-            display: flex;
-            flex-direction: column;
-            background: #111827;
-            border-bottom: 2px solid var(--border-color);
-        }
-
-        .header-row {
-            display: flex;
-        }
-
+        /* 2줄 계층 헤더 */
+        .table-header { display: flex; flex-direction: column; background: #111827; border-bottom: 2px solid var(--border-color); }
+        .header-row { display: flex; }
         .header-frozen-zone {
-            width: 380px;
-            min-width: 380px;
-            padding-left: 15px;
-            display: flex;
-            align-items: center;
-            font-weight: bold;
-            font-size: 0.9rem;
-            color: var(--text-muted);
-            border-right: 2px solid var(--border-color);
-            background: #0f172a;
-            position: sticky;
-            left: 0;
-            z-index: 25;
+            width: 380px; min-width: 380px; padding-left: 15px; display: flex; align-items: center;
+            font-weight: bold; font-size: 0.85rem; color: var(--text-muted); border-right: 2px solid var(--border-color);
+            background: #0f172a; position: sticky; left: 0; z-index: 25; height: 40px;
         }
-
-        .header-grid-zone {
-            display: flex;
-        }
-
+        .header-grid-zone { display: flex; }
         .grid-header-cell {
-            border-right: 1px solid var(--border-color);
-            border-bottom: 1px solid var(--border-color);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.75rem;
-            font-weight: bold;
-            color: var(--text-color);
-            background: #111827;
-            height: 36px;
-            cursor: pointer;
+            border-right: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            font-size: 0.75rem; font-weight: bold; color: var(--text-color); background: #111827; height: 40px; cursor: pointer;
         }
-        .grid-header-cell:hover {
-            background: var(--primary-color);
-        }
-        .grid-header-cell .sub-date {
-            font-size: 0.65rem;
-            color: var(--text-muted);
-            font-weight: normal;
-        }
+        .grid-header-cell:hover { background: var(--primary-color); }
+        .grid-header-cell .sub-date { font-size: 0.65rem; color: var(--text-muted); }
 
-        /* 행 구성 */
-        .task-row {
-            display: flex;
-            border-bottom: 1px solid var(--border-color);
-            background: var(--card-bg);
-            position: relative;
-        }
-        .task-row.break-row {
-            background: #161e2e;
-        }
-
+        /* 행 디자인 */
+        .task-row { display: flex; border-bottom: 1px solid var(--border-color); background: var(--card-bg); }
         .task-left-panel {
-            width: 380px;
-            min-width: 380px;
-            padding: 8px 12px;
-            border-right: 2px solid var(--border-color);
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            background: #1e293b;
-            position: sticky;
-            left: 0;
-            z-index: 15;
+            width: 380px; min-width: 380px; padding: 8px 12px; border-right: 2px solid var(--border-color);
+            display: flex; align-items: center; gap: 6px; background: #1e293b; position: sticky; left: 0; z-index: 15;
         }
-
-        .toggle-arrow { cursor: pointer; width: 14px; text-align: center; color: var(--accent-color); }
-
         .task-name-input {
-            background: transparent;
-            border: 1px solid transparent;
-            color: var(--text-color);
-            font-size: 0.85rem;
-            font-weight: 500;
-            flex: 1;
-            padding: 3px;
+            background: transparent; border: 1px solid transparent; color: var(--text-color);
+            font-size: 0.85rem; flex: 1; padding: 4px; border-radius: 4px;
         }
-        .task-name-input:focus {
-            background: #0f172a;
-            border-color: var(--primary-color);
-            outline: none;
-        }
+        .task-name-input:focus { background: #0f172a; border-color: var(--primary-color); outline: none; }
 
-        .task-right-track {
-            position: relative;
-            display: flex;
-            background: #0f172a;
-        }
+        .task-right-track { position: relative; display: flex; background: #0f172a; height: 50px; }
+        .track-grid-unit { border-right: 1px dashed rgba(51, 65, 85, 0.3); height: 100%; }
 
-        .track-grid-unit {
-            border-right: 1px dashed rgba(51, 65, 85, 0.25);
-            height: 50px;
-        }
-
-        /* 인디케이터 바 디자인 */
+        /* 스케줄 스팬 바 */
         .time-bar-element {
-            position: absolute;
-            height: 30px;
-            top: 10px;
-            background: linear-gradient(90deg, #f59e0b, #d97706);
-            border-radius: 6px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: 0 3px 6px rgba(0,0,0,0.3);
-            cursor: grab;
-        }
-        .time-bar-element.parent-bar {
+            position: absolute; height: 32px; top: 9px;
             background: linear-gradient(90deg, #6366f1, #4f46e5);
+            border-radius: 6px; display: flex; justify-content: space-between; align-items: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2); cursor: grab;
         }
-        .time-bar-element.auto-break-bar {
-            background: repeating-linear-gradient(45deg, #475569, #475569 10px, #334155 10px, #334155 20px);
-            cursor: not-allowed;
-        }
-
-        .bar-label {
-            flex: 1;
-            text-align: center;
-            font-size: 0.75rem;
-            font-weight: 700;
-            color: white;
-            overflow: hidden;
-            white-space: nowrap;
-            text-overflow: ellipsis;
-            padding: 0 4px;
-        }
-
-        .resizer {
-            width: 6px;
-            height: 100%;
-            background: rgba(255, 255, 255, 0.2);
-            cursor: ew-resize;
-        }
-
-        .live-marker-line {
-            position: absolute;
-            top: 0;
-            bottom: 0;
-            width: 2px;
-            background: var(--danger-color);
-            z-index: 10;
-            pointer-events: none;
-        }
+        .bar-label { flex: 1; text-align: center; font-size: 0.75rem; font-weight: 700; color: white; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; padding: 0 4px; }
+        .resizer { width: 6px; height: 100%; background: rgba(255, 255, 255, 0.25); cursor: ew-resize; }
     </style>
 </head>
 <body>
 
     <header>
         <div class="title-container">
-            <input type="text" id="main-title" class="title-input" value="🎬 마스터 워크플랜 프로덕션 트래커" disabled oninput="adjustTitleWidth(this)">
-            <button id="lock-btn" class="lock-btn" onclick="toggleTitleLock()">🔒 수정</button>
+            <input type="text" id="main-title" class="title-input" value="🎬 마스터 워크플랜 프로덕션 트래커">
         </div>
+        <!-- 📍 현재 위치 이동을 돕는 브레드크럼 헤더 경로 내비게이션 -->
+        <div class="breadcrumb-trail" id="breadcrumb-container"></div>
         <div class="control-panel">
-            <button id="back-btn" class="secondary" onclick="goBackViewMode()" style="display:none;">⬅️ 이전 단계로</button>
-            <button onclick="addNewRow(null)">➕ 최상위 대분류 추가</button>
-            <button class="secondary" onclick="resetAllData()">🔄 초기화</button>
+            <button onclick="addNewRow()">➕ 현재 레벨에 분류 추가</button>
+            <button class="secondary" onclick="adjustZoom(-15)">➖ 축소</button>
+            <button class="secondary" onclick="adjustZoom(15)">➕ 확대</button>
+            <button class="danger" onclick="resetAllData()">🔄 초기화</button>
         </div>
     </header>
 
-    <div class="settings-bar">
-        <div class="flex-group">
-            <label>📅 <strong>타임라인 모드:</strong></label>
-            <select id="view-mode-select" onchange="changeViewMode(this.value)">
-                <option value="year">연 단위 계획 (연 ➡️ 월 트리거)</option>
-                <option value="month">월 단위 계획 (월 ➡️ 주 트리거)</option>
-                <option value="day">주간 일일 계획 (일 단위 뷰)</option>
-                <option value="hour">일일 시간 계획 (24시간 뷰)</option>
-            </select>
-        </div>
-
-        <div class="flex-group" style="background: #0f172a; padding: 6px 12px; border-radius: 8px;">
-            <span>✂️ <strong>뷰 범위 제한:</strong></span>
-            <input type="number" id="crop-start" value="0" min="0">
-            <span>부터</span>
-            <input type="number" id="crop-end" value="12" min="1">
-            <span id="crop-unit-label">까지</span>
-            <button onclick="applyCropFilter()">적용</button>
-            <button class="secondary" onclick="clearCropFilter()">🔓 해제</button>
-        </div>
-
-        <div class="flex-group">
-            <button class="secondary" onclick="adjustZoom(-10)">➖ 축소</button>
-            <button class="secondary" onclick="adjustZoom(10)">➕ 확대</button>
-        </div>
-    </div>
-
     <div class="timeline-board">
         <div class="timeline-container-scroll">
-            <div class="timeline-table" id="timeline-main-table">
-                
-                <!-- 2줄 계층 헤더 -->
+            <div class="timeline-table">
                 <div class="table-header" id="render-header-wrapper"></div>
-
-                <!-- 메인 로우 컨테이너 -->
                 <div id="dynamic-rows-container"></div>
-
-                <!-- 현재 추적 라인 -->
-                <div class="live-marker-line" id="live-timeline-marker"></div>
-
             </div>
         </div>
     </div>
 
     <script>
-        // 상변동성 데이터 구조셋
-        let projectTasks = [
-            { id: "p1", name: "2026년 대규모 촬영 마스터플랜", start: 0, end: 12, parentId: null, open: true },
-            { id: "c1", name: "상반기 실내 세트 완공 및 프리 프로덕션", start: 0, end: 5, parentId: "p1", open: true },
-            { id: "c2", name: "하반기 로케이션 및 메인 필름 슈팅", start: 6, end: 11, parentId: "p1", open: true }
-        ];
+        // 📍 계층 구조를 분리 저장하기 위한 글로벌 키 기반 딕셔너리 데이터베이스 구조
+        let db = {
+            "root": [
+                { id: "p1", name: "2026년 콘텐츠 제작 기획 및 슈팅", start: 0, end: 5 },
+                { id: "p2", name: "새 마스터 대분류 과업 항목", start: 6, end: 10 }
+            ]
+        };
 
-        let viewMode = 'year'; // year, month, day, hour
-        let cellWidth = 80;
-        
-        let isCropped = false;
-        let cropStart = 0;
-        let cropEnd = 12;
+        // 내비게이션 상태 추적기
+        let currentMode = 'year'; // year -> month -> day -> hour
+        let currentPath = { year: 2026, month: null, week: null, day: null };
+        let cellWidth = 90;
 
-        // 드래그 상태 캐시 기어
+        // 드래그 제어 가드 변수
         let currentDragBarId = null;
-        let dragType = null; 
+        let dragType = null;
         let dragStartX = 0;
-        let dragStartLeftCell = 0;
-        let dragStartEndCell = 0;
-        let childInitialOffsets = []; 
-
-        // 달력 매핑을 위한 상태 추적기
-        let targetYear = 2026;
-        let selectedMonthIndex = 0; // 0 ~ 11
-        let selectedWeekIndex = 0;
+        let dragStartLeft = 0;
+        let dragStartEnd = 0;
 
         function init() {
-            const saved = localStorage.getItem('master_timeline_tasks_v2');
-            const savedTitle = localStorage.getItem('master_timeline_title_v2');
-            if (saved) projectTasks = JSON.parse(saved);
-            if (savedTitle) {
-                const titleInput = document.getElementById('main-title');
-                titleInput.value = savedTitle;
-                adjustTitleWidth(titleInput);
-            }
-            setDefaultCropBounds();
+            const saved = localStorage.getItem('isolated_timeline_db_v3');
+            if (saved) db = JSON.parse(saved);
+            renderBreadcrumb();
             renderAll();
         }
 
         function saveData() {
-            localStorage.setItem('master_timeline_tasks_v2', JSON.stringify(projectTasks));
-            localStorage.setItem('master_timeline_title_v2', document.getElementById('main-title').value);
+            localStorage.setItem('isolated_timeline_db_v3', JSON.stringify(db));
         }
 
-        function toggleTitleLock() {
-            const input = document.getElementById('main-title');
-            const btn = document.getElementById('lock-btn');
-            if (input.disabled) {
-                input.disabled = false;
-                input.focus();
-                btn.innerText = "🔓 저장";
-            } else {
-                input.disabled = true;
-                btn.innerText = "🔒 수정";
-                saveData();
-            }
+        // 현재 진입한 경로에 기반하여 고유한 독립 데이터 키를 생성 (예: "2026-5", "2026-5-2주차")
+        function getCurrentStorageKey() {
+            if (currentMode === 'year') return "root";
+            if (currentMode === 'month') return `m-${currentPath.year}-${currentPath.month}`;
+            if (currentMode === 'day') return `w-${currentPath.year}-${currentPath.month}-${currentPath.week}`;
+            if (currentMode === 'hour') return `d-${currentPath.year}-${currentPath.month}-${currentPath.week}-${currentPath.day}`;
+            return "root";
         }
 
-        function adjustTitleWidth(element) {
-            element.style.width = (element.value.length + 3) + "ch";
+        function getCurrentTasks() {
+            let key = getCurrentStorageKey();
+            if (!db[key]) db[key] = [];
+            return db[key];
         }
 
-        // 특정 월의 총 주차 수 및 각 주차별 일자 경계선 연산 함수 (실제 달력 기준 요일 연동)
-        function getWeeksInMonth(year, monthIndex) {
-            let firstDate = new Date(year, monthIndex, 1);
-            let lastDate = new Date(year, monthIndex + 1, 0);
-            let totalDays = lastDate.getDate();
-            
-            let startDayOfWeek = firstDate.getDay(); // 0: 일요일, 1: 월요일...
-            
-            let weeks = [];
-            let currentDay = 1;
-            
-            // 1주차 연산
-            let firstWeekDays = 7 - startDayOfWeek;
-            weeks.push({ start: 1, end: firstWeekDays });
-            currentDay += firstWeekDays;
-            
-            // 나머지 주차 연산
-            while (currentDay <= totalDays) {
-                let endDay = currentDay + 6;
-                if (endDay > totalDays) endDay = totalDays;
-                weeks.push({ start: currentDay, end: endDay });
-                currentDay += 7;
-            }
-            return weeks;
-        }
-
-        function getMaxCellsForMode() {
-            if (viewMode === 'year') return 12;
-            if (viewMode === 'month') return getWeeksInMonth(targetYear, selectedMonthIndex).length;
-            if (viewMode === 'day') {
-                let weeks = getWeeksInMonth(targetYear, selectedMonthIndex);
-                let weekInfo = weeks[selectedWeekIndex] || { start: 1, end: 7 };
-                return (weekInfo.end - weekInfo.start) + 1;
-            }
-            if (viewMode === 'hour') return 24;
+        function getMaxCells() {
+            if (currentMode === 'year') return 12; // 12개월
+            if (currentMode === 'month') return 5;  // 5주차 기본 세팅
+            if (currentMode === 'day') return 7;   // 7일간
+            if (currentMode === 'hour') return 24 * 12; // 24시간을 5분 단위(한 시간에 12칸)로 쪼갬 = 288칸
             return 12;
         }
 
-        function setDefaultCropBounds() {
-            if (!isCropped) {
-                cropStart = 0;
-                cropEnd = getMaxCellsForMode();
-                document.getElementById('crop-start').value = cropStart;
-                document.getElementById('crop-end').value = cropEnd;
+        // 📍 상단 헤더 클릭 바인딩 및 경로 렌더러
+        function renderBreadcrumb() {
+            const container = document.getElementById('breadcrumb-container');
+            container.innerHTML = '';
+
+            let html = `<span class="crumb-item" onclick="jumpToMode('year')">📅 ${currentPath.year}년 전체</span>`;
+            
+            if (currentMode === 'month' || currentMode === 'day' || currentMode === 'hour') {
+                html += ` <span class="crumb-separator">&gt;</span> <span class="crumb-item" onclick="jumpToMode('month', ${currentPath.month})">${currentPath.month + 1}월 계획</span>`;
             }
-            
-            // 단위 레이블 업데이트 및 뒤로가기 버튼 컨트롤
-            const backBtn = document.getElementById('back-btn');
-            const unitLabel = document.getElementById('crop-unit-label');
-            if (viewMode === 'year') { backBtn.style.display = 'none'; unitLabel.innerText = '월 까지'; }
-            else if (viewMode === 'month') { backBtn.style.display = 'inline-block'; unitLabel.innerText = '주차 까지'; }
-            else if (viewMode === 'day') { backBtn.style.display = 'inline-block'; unitLabel.innerText = '일 까지'; }
-            else if (viewMode === 'hour') { backBtn.style.display = 'inline-block'; unitLabel.innerText = '시 까지'; }
-        }
-
-        function changeViewMode(mode) {
-            viewMode = mode;
-            isCropped = false;
-            document.getElementById('view-mode-select').value = mode;
-            setDefaultCropBounds();
-            
-            let maxLimit = getMaxCellsForMode();
-            projectTasks.forEach(t => {
-                if (t.end > maxLimit) t.end = maxLimit;
-                if (t.start >= maxLimit) t.start = 0;
-                if (t.start === t.end) t.end = t.start + 1;
-            });
-            renderAll();
-        }
-
-        function goBackViewMode() {
-            if (viewMode === 'hour') changeViewMode('day');
-            else if (viewMode === 'day') changeViewMode('month');
-            else if (viewMode === 'month') changeViewMode('year');
-        }
-
-        function applyCropFilter() {
-            let s = parseInt(document.getElementById('crop-start').value, 10);
-            let e = parseInt(document.getElementById('crop-end').value, 10);
-            let maxLimit = getMaxCellsForMode();
-            
-            if (s >= e) { alert("시작 지점은 끝 지점보다 작아야 합니다."); return; }
-            if (e > maxLimit) e = maxLimit;
-            
-            cropStart = s;
-            cropEnd = e;
-            isCropped = true;
-            renderAll();
-        }
-
-        function clearCropFilter() {
-            isCropped = false;
-            setDefaultCropBounds();
-            renderAll();
-        }
-
-        function adjustZoom(amt) {
-            cellWidth = Math.max(40, Math.min(200, cellWidth + amt));
-            renderAll();
-        }
-
-        function resetAllData() {
-            if (confirm("정말 초기화하시겠습니까?")) {
-                localStorage.clear();
-                location.reload();
+            if (currentMode === 'day' || currentMode === 'hour') {
+                html += ` <span class="crumb-separator">&gt;</span> <span class="crumb-item" onclick="jumpToMode('day', ${currentPath.month}, ${currentPath.week})">${currentPath.week + 1}주차</span>`;
             }
+            if (currentMode === 'hour') {
+                html += ` <span class="crumb-separator">&gt;</span> <span class="crumb-item">${currentPath.day}일 (5분 인터벌 타임)</span>`;
+            }
+            container.innerHTML = html;
         }
 
-        // 헤더 렌더링 엔진 (실제 요일 데이터 바인딩 기법 가동)
+        function jumpToMode(mode, m = null, w = null, d = null) {
+            currentMode = mode;
+            if (mode === 'year') { currentPath.month = null; currentPath.week = null; currentPath.day = null; }
+            else if (mode === 'month') { currentPath.month = m; currentPath.week = null; currentPath.day = null; }
+            else if (mode === 'day') { currentPath.month = m; currentPath.week = w; currentPath.day = null; }
+            renderBreadcrumb();
+            renderAll();
+        }
+
         function renderHeader() {
             const wrapper = document.getElementById('render-header-wrapper');
             wrapper.innerHTML = '';
@@ -547,263 +216,136 @@
             const row1 = document.createElement('div'); row1.className = 'header-row';
             const row2 = document.createElement('div'); row2.className = 'header-row';
 
-            const frozen1 = document.createElement('div'); frozen1.className = 'header-frozen-zone'; frozen1.innerText = "프로젝트 구조 및 대분류";
-            const frozen2 = document.createElement('div'); frozen2.className = 'header-frozen-zone'; frozen2.innerText = "세부 태스크 단계";
-            row1.appendChild(frozen1);
-            row2.appendChild(frozen2);
+            const f1 = document.createElement('div'); f1.className = 'header-frozen-zone'; f1.innerText = "분류 구조 및 타임라인 설정";
+            const f2 = document.createElement('div'); f2.className = 'header-frozen-zone'; f2.innerText = "단위 스케줄 바 제어";
+            row1.appendChild(f1); row2.appendChild(f2);
 
-            const gridZone1 = document.createElement('div'); gridZone1.className = 'header-grid-zone';
-            const gridZone2 = document.createElement('div'); gridZone2.className = 'header-grid-zone';
+            const g1 = document.createElement('div'); g1.className = 'header-grid-zone';
+            const g2 = document.createElement('div'); g2.className = 'header-grid-zone';
 
-            let totalVisibleCells = cropEnd - cropStart;
+            let totalCells = getMaxCells();
 
-            if (viewMode === 'year') {
-                const yrCell = document.createElement('div');
-                yrCell.className = 'grid-header-cell';
-                yrCell.style.width = `${totalVisibleCells * cellWidth}px`;
-                yrCell.innerText = `${targetYear}년 대타임라인 (클릭 시 월 단위 진입)`;
-                gridZone1.appendChild(yrCell);
+            if (currentMode === 'year') {
+                const c = document.createElement('div'); c.className = 'grid-header-cell'; c.style.width = `${totalCells * cellWidth}px`;
+                c.innerText = "2026년도 월별 인덱스 (클릭시 월간 독립 뷰 확장)";
+                g1.appendChild(c);
 
-                for (let i = cropStart; i < cropEnd; i++) {
-                    const mCell = document.createElement('div');
-                    mCell.className = 'grid-header-cell';
-                    mCell.style.width = `${cellWidth}px`;
-                    mCell.innerHTML = `<div>${i + 1}월</div><div class="sub-date">클릭 시 진입</div>`;
-                    mCell.onclick = () => {
-                        selectedMonthIndex = i;
-                        changeViewMode('month');
-                    };
-                    gridZone2.appendChild(mCell);
+                for (let i = 0; i < 12; i++) {
+                    const cell = document.createElement('div'); cell.className = 'grid-header-cell'; cell.style.width = `${cellWidth}px`;
+                    cell.innerHTML = `<div>${i+1}월</div><div class="sub-date">진입하기</div>`;
+                    cell.onclick = () => jumpToMode('month', i);
+                    g2.appendChild(cell);
                 }
             } 
-            else if (viewMode === 'month') {
-                const moCell = document.createElement('div');
-                moCell.className = 'grid-header-cell';
-                moCell.style.width = `${totalVisibleCells * cellWidth}px`;
-                moCell.innerText = `${selectedMonthIndex + 1}월 세부 타임라인 (클릭 시 일 단위 진입)`;
-                gridZone1.appendChild(moCell);
+            else if (currentMode === 'month') {
+                const c = document.createElement('div'); c.className = 'grid-header-cell'; c.style.width = `${totalCells * cellWidth}px`;
+                c.innerText = `${currentPath.month + 1}월 세부 주차 플랜`;
+                g1.appendChild(c);
 
-                let weeks = getWeeksInMonth(targetYear, selectedMonthIndex);
-                for (let i = cropStart; i < cropEnd; i++) {
-                    const wCell = document.createElement('div');
-                    wCell.className = 'grid-header-cell';
-                    wCell.style.width = `${cellWidth}px`;
-                    let wInfo = weeks[i] ? `${weeks[i].start}~${weeks[i].end}일` : '';
-                    wCell.innerHTML = `<div>${i + 1}주차</div><div class="sub-date">${wInfo}</div>`;
-                    wCell.onclick = () => {
-                        selectedWeekIndex = i;
-                        changeViewMode('day');
-                    };
-                    gridZone2.appendChild(wCell);
+                for (let i = 0; i < 5; i++) {
+                    const cell = document.createElement('div'); cell.className = 'grid-header-cell'; cell.style.width = `${cellWidth}px`;
+                    cell.innerHTML = `<div>${i+1}주차</div><div class="sub-date">일별 확장</div>`;
+                    cell.onclick = () => jumpToMode('day', currentPath.month, i);
+                    g2.appendChild(cell);
                 }
             } 
-            else if (viewMode === 'day') {
-                let weeks = getWeeksInMonth(targetYear, selectedMonthIndex);
-                let currentWeekInfo = weeks[selectedWeekIndex] || { start: 1, end: 7 };
-                
-                const dayCell = document.createElement('div');
-                dayCell.className = 'grid-header-cell';
-                dayCell.style.width = `${totalVisibleCells * cellWidth}px`;
-                dayCell.innerText = `${selectedMonthIndex + 1}월 ${selectedWeekIndex + 1}주차 일간 타임라인`;
-                gridZone1.appendChild(dayCell);
+            else if (currentMode === 'day') {
+                const c = document.createElement('div'); c.className = 'grid-header-cell'; c.style.width = `${totalCells * cellWidth}px`;
+                c.innerText = `${currentPath.month + 1}월 ${currentPath.week + 1}주차 일별 계획`;
+                g1.appendChild(c);
 
-                const dayNames = ["일", "월", "화", "수", "목", "금", "토"];
-                for (let i = cropStart; i < cropEnd; i++) {
-                    let dateValue = currentWeekInfo.start + i;
-                    let dateObj = new Date(targetYear, selectedMonthIndex, dateValue);
-                    let dayName = dayNames[dateObj.getDay()];
-
-                    const dCell = document.createElement('div');
-                    dCell.className = 'grid-header-cell';
-                    dCell.style.width = `${cellWidth}px`;
-                    dCell.innerHTML = `<div>${dateValue}일 (${dayName})</div><div class="sub-date">클릭 시 시간 분할</div>`;
-                    dCell.onclick = () => { changeViewMode('hour'); };
-                    gridZone2.appendChild(dCell);
+                for (let i = 0; i < 7; i++) {
+                    const cell = document.createElement('div'); cell.className = 'grid-header-cell'; cell.style.width = `${cellWidth}px`;
+                    cell.innerHTML = `<div>${i+1}일 차</div><div class="sub-date">5분 단위 제어</div>`;
+                    cell.onclick = () => { currentPath.day = i + 1; jumpToMode('hour', currentPath.month, currentPath.week, i + 1); };
+                    g2.appendChild(cell);
                 }
             } 
-            else if (viewMode === 'hour') {
-                const hCellMain = document.createElement('div');
-                hCellMain.className = 'grid-header-cell';
-                hCellMain.style.width = `${totalVisibleCells * cellWidth}px`;
-                hCellMain.innerText = "일일 프로덕션 슈팅 타임라인 (24시간 제어)";
-                gridZone1.appendChild(hCellMain);
+            else if (currentMode === 'hour') {
+                const c = document.createElement('div'); c.className = 'grid-header-cell'; c.style.width = `${totalCells * cellWidth}px`;
+                c.innerText = `${currentPath.day}일차 24시간 초정밀 타임 플랜 (1칸 = 5분)`;
+                g1.appendChild(c);
 
-                for (let i = cropStart; i < cropEnd; i++) {
-                    const hCell = document.createElement('div');
-                    hCell.className = 'grid-header-cell';
-                    hCell.style.width = `${cellWidth}px`;
-                    hCell.innerText = `${i}시`;
-                    gridZone2.appendChild(hCell);
+                // 24시간 표시 (각 시간은 12개의 5분 칸으로 구성)
+                for (let h = 0; h < 24; h++) {
+                    const cell = document.createElement('div'); cell.className = 'grid-header-cell'; cell.style.width = `${cellWidth * 12}px`;
+                    cell.innerHTML = `<div>${h}시</div><div class="sub-date">(5분 단위 분할 영역)</div>`;
+                    g2.appendChild(cell);
                 }
             }
 
-            row1.appendChild(gridZone1);
-            row2.appendChild(gridZone2);
-            wrapper.appendChild(row1);
-            wrapper.appendChild(row2);
+            row1.appendChild(g1); row2.appendChild(g2);
+            wrapper.appendChild(row1); wrapper.appendChild(row2);
         }
 
-        // 유기적 내부 계산 및 유동적 휴식 구간 트래커 서브 루틴 구현
+        // 📍 5분 단위에 맞춰 텍스트 라벨을 이쁘게 포맷팅해 주는 파서 서브루틴
+        function formatLabel(start, end) {
+            if (currentMode !== 'hour') return `${start + 1} ~ ${end} 칸`;
+            
+            function parseMinutes(units) {
+                let totalMin = units * 5;
+                let h = Math.floor(totalMin / 60);
+                let m = totalMin % 60;
+                return `${h}시 ${m === 0 ? '00' : m}분`;
+            }
+            return `${parseMinutes(start)} - ${parseMinutes(end)}`;
+        }
+
         function renderRows() {
             const container = document.getElementById('dynamic-rows-container');
             container.innerHTML = '';
 
-            const visibleCells = cropEnd - cropStart;
+            let tasks = getCurrentTasks();
+            let totalCells = getMaxCells();
 
-            // 트리 계층 구조 가공 파이프라인
-            let processedList = [];
-            const roots = projectTasks.filter(t => !t.parentId);
-            
-            roots.forEach(root => {
-                processedList.push({ task: root, isBreak: false });
-                
-                if (root.open) {
-                    const children = projectTasks.filter(t => t.parentId === root.id);
-                    children.sort((a,b) => a.start - b.start);
-                    
-                    // ⚙️ 유동적 휴식 및 연산 세그먼트 주입 엔진
-                    let currentMarker = root.start; 
-                    
-                    children.forEach((child) => {
-                        if (child.start > currentMarker && child.start <= root.end) {
-                            processedList.push({
-                                isBreak: true,
-                                parentId: root.id,
-                                start: currentMarker,
-                                end: Math.min(child.start, root.end),
-                                name: "☕ 휴식 및 정비 (자동 계산 구간)"
-                            });
-                        }
-                        // 부모 영역 내부에 한해서만 하위 노출 가드 처리
-                        if (child.start < root.end) {
-                            processedList.push({ task: child, isBreak: false });
-                            currentMarker = Math.max(currentMarker, child.end);
-                        }
-                    });
+            tasks.forEach((task) => {
+                const row = document.createElement('div'); row.className = 'task-row';
 
-                    if (currentMarker < root.end && children.length > 0) {
-                        processedList.push({
-                            isBreak: true,
-                            parentId: root.id,
-                            start: currentMarker,
-                            end: root.end,
-                            name: "☕ 휴식 및 정비 (자동 계산 구간)"
-                        });
-                    }
-                }
-            });
+                const left = document.createElement('div'); left.className = 'task-left-panel';
+                const input = document.createElement('input'); input.className = 'task-name-input'; input.value = task.name;
+                input.onchange = (e) => { task.name = e.target.value; saveData(); };
+                left.appendChild(input);
 
-            // 마운트 렌더러 루프
-            processedList.forEach((item) => {
-                const row = document.createElement('div');
-                row.className = `task-row ${item.isBreak ? 'break-row' : ''}`;
+                const delBtn = document.createElement('button'); delBtn.className = 'danger'; delBtn.style.padding = '3px 7px'; delBtn.innerText = '✕';
+                delBtn.onclick = () => { deleteRow(task.id); };
+                left.appendChild(delBtn);
+                row.appendChild(left);
 
-                const leftPanel = document.createElement('div');
-                leftPanel.className = 'task-left-panel';
+                const rightTrack = document.createElement('div'); rightTrack.className = 'task-right-track';
+                let renderCells = currentMode === 'hour' ? 24 * 12 : totalCells;
+                rightTrack.style.width = `${renderCells * cellWidth}px`;
 
-                if (item.isBreak) {
-                    leftPanel.style.paddingLeft = '30px';
-                    leftPanel.innerHTML = `<span style="color:var(--text-muted); font-size:0.75rem; font-style:italic;">${item.name}</span>`;
-                    row.appendChild(leftPanel);
-                } else {
-                    const task = item.task;
-                    if (task.parentId) leftPanel.style.paddingLeft = '30px';
-
-                    const arrow = document.createElement('div');
-                    arrow.className = 'toggle-arrow';
-                    const hasChild = projectTasks.some(t => t.parentId === task.id);
-                    arrow.innerText = hasChild ? (task.open ? '▼' : '▶') : '•';
-                    arrow.onclick = () => { if(hasChild) { task.open = !task.open; renderAll(); } };
-                    leftPanel.appendChild(arrow);
-
-                    const nameInput = document.createElement('input');
-                    nameInput.className = 'task-name-input';
-                    nameInput.value = task.name;
-                    nameInput.onchange = (e) => { task.name = e.target.value; saveData(); };
-                    leftPanel.appendChild(nameInput);
-
-                    if (!task.parentId) {
-                        const btnSub = document.createElement('button');
-                        btnSub.className = 'secondary';
-                        btnSub.style.padding = '2px 6px'; btnSub.style.fontSize = '0.7rem';
-                        btnSub.innerText = '+ 자식';
-                        btnSub.onclick = () => addNewRow(task.id);
-                        leftPanel.appendChild(btnSub);
-                    }
-
-                    const btnDel = document.createElement('button');
-                    btnDel.className = 'danger';
-                    btnDel.style.padding = '2px 6px'; btnDel.style.fontSize = '0.7rem'; btnDel.innerText = '✕';
-                    btnDel.onclick = () => deleteRow(task.id);
-                    leftPanel.appendChild(btnDel);
-
-                    row.appendChild(leftPanel);
+                for (let i = 0; i < renderCells; i++) {
+                    const u = document.createElement('div'); u.className = 'track-grid-unit'; u.style.width = `${cellWidth}px`;
+                    rightTrack.appendChild(u);
                 }
 
-                // 우측 그리드 백그라운드 트랙
-                const rightTrack = document.createElement('div');
-                rightTrack.className = 'task-right-track';
-                rightTrack.style.width = `${visibleCells * cellWidth}px`;
+                // 스케줄 실체 바 생성
+                const bar = document.createElement('div'); bar.className = 'time-bar-element';
+                bar.style.left = `${task.start * cellWidth}px`;
+                bar.style.width = `${(task.end - task.start) * cellWidth}px`;
 
-                for (let i = 0; i < visibleCells; i++) {
-                    const unit = document.createElement('div');
-                    unit.className = 'track-grid-unit';
-                    unit.style.width = `${cellWidth}px`;
-                    rightTrack.appendChild(unit);
-                }
+                const hL = document.createElement('div'); hL.className = 'resizer';
+                const lbl = document.createElement('div'); lbl.className = 'bar-label'; lbl.innerText = `${formatLabel(task.start, task.end)} : ${task.name}`;
+                const hR = document.createElement('div'); hR.className = 'resizer';
 
-                // 좌표 가이드 및 포지셔닝 보정 연산
-                let bStart = item.isBreak ? item.start : item.task.start;
-                let bEnd = item.isBreak ? item.end : item.task.end;
+                bar.appendChild(hL); bar.appendChild(lbl); bar.appendChild(hR);
 
-                if (!(bEnd <= cropStart || bStart >= cropEnd)) {
-                    let renderStart = Math.max(cropStart, bStart) - cropStart;
-                    let renderEnd = Math.min(cropEnd, bEnd) - cropStart;
-                    
-                    const bar = document.createElement('div');
-                    bar.className = `time-bar-element ${item.isBreak ? 'auto-break-bar' : (!item.task.parentId ? 'parent-bar' : '')}`;
-                    bar.style.left = `${renderStart * cellWidth}px`;
-                    bar.style.width = `${(renderEnd - renderStart) * cellWidth}px`;
+                hL.onmousedown = (e) => { e.stopPropagation(); startDrag(task.id, 'left', e.clientX); };
+                hR.onmousedown = (e) => { e.stopPropagation(); startDrag(task.id, 'right', e.clientX); };
+                lbl.onmousedown = (e) => { e.stopPropagation(); startDrag(task.id, 'move', e.clientX); };
 
-                    if (item.isBreak) {
-                        bar.innerHTML = `<div class="bar-label">${item.start} ~ ${item.end} 공백</div>`;
-                    } else {
-                        const task = item.task;
-                        const handleL = document.createElement('div'); handleL.className = 'resizer';
-                        const label = document.createElement('div'); label.className = 'bar-label'; label.innerText = `${task.start}~${task.end} : ${task.name}`;
-                        const handleR = document.createElement('div'); handleR.className = 'resizer';
-
-                        bar.appendChild(handleL);
-                        bar.appendChild(label);
-                        bar.appendChild(handleR);
-
-                        handleL.addEventListener('mousedown', (e) => { e.stopPropagation(); initDrag(task.id, 'left', e.clientX); });
-                        handleR.addEventListener('mousedown', (e) => { e.stopPropagation(); initDrag(task.id, 'right', e.clientX); });
-                        label.addEventListener('mousedown', (e) => { e.stopPropagation(); initDrag(task.id, 'move', e.clientX); });
-                    }
-                    rightTrack.appendChild(bar);
-                }
-
+                rightTrack.appendChild(bar);
                 row.appendChild(rightTrack);
                 container.appendChild(row);
             });
         }
 
-        // 상/하위 한계점 제어가 정밀 튜닝된 드래그 기계학 엔진
-        function initDrag(id, type, clientX) {
-            currentDragBarId = id;
-            dragType = type;
-            dragStartX = clientX;
-
-            const task = projectTasks.find(t => t.id === id);
-            dragStartLeftCell = task.start;
-            dragStartEndCell = task.end;
-
-            if (!task.parentId && type === 'move') {
-                childInitialOffsets = projectTasks
-                    .filter(t => t.parentId === task.id)
-                    .map(c => ({ id: c.id, startOffset: c.start - task.start, length: c.end - c.start }));
-            }
+        function startDrag(id, type, x) {
+            currentDragBarId = id; dragType = type; dragStartX = x;
+            let tasks = getCurrentTasks();
+            let task = tasks.find(t => t.id === id);
+            dragStartLeft = task.start; dragStartEnd = task.end;
 
             document.addEventListener('mousemove', onDragMove);
             document.addEventListener('mouseup', endDrag);
@@ -811,63 +353,25 @@
 
         function onDragMove(e) {
             if (!currentDragBarId) return;
-            const task = projectTasks.find(t => t.id === currentDragBarId);
-            
-            const deltaX = e.clientX - dragStartX;
-            const cellDelta = Math.round(deltaX / cellWidth);
-            const maxLimit = getMaxCellsForMode();
+            let tasks = getCurrentTasks();
+            let task = tasks.find(t => t.id === currentDragBarId);
+            let totalCells = getMaxCells();
 
-            // 자식들의 최소 및 최대 한계점 사전 연산
-            let children = projectTasks.filter(t => t.parentId === task.id);
-            let minChildStart = children.length > 0 ? Math.min(...children.map(c => c.start)) : null;
-            let maxChildEnd = children.length > 0 ? Math.max(...children.map(c => c.end)) : null;
+            let deltaX = e.clientX - dragStartX;
+            let cellDelta = Math.round(deltaX / cellWidth);
 
             if (dragType === 'move') {
-                let ns = dragStartLeftCell + cellDelta;
-                let ne = dragStartEndCell + cellDelta;
-                
-                if (ns >= 0 && ne <= maxLimit + 50) {
-                    task.start = ns;
-                    task.end = ne;
-
-                    if (!task.parentId) {
-                        childInitialOffsets.forEach(cOffset => {
-                            const child = projectTasks.find(t => t.id === cOffset.id);
-                            if (child) {
-                                child.start = task.start + cOffset.startOffset;
-                                child.end = child.start + cOffset.length;
-                            }
-                        });
-                    }
-                }
-            } 
-            else if (dragType === 'left') {
-                let ns = dragStartLeftCell + cellDelta;
-                if (ns >= 0 && ns < task.end) {
-                    // 상위 항목 제한: 하위 자식의 제일 처음 시작점보다 길어질 수 없음
-                    if (!task.parentId && minChildStart !== null && ns > minChildStart) {
-                        ns = minChildStart;
-                    }
-                    task.start = ns;
-                }
-            } 
-            else if (dragType === 'right') {
-                let ne = dragStartEndCell + cellDelta;
-                if (ne > task.start) {
-                    // 상위 항목 제한: 하위 자식의 제일 마지막 끝점보다 짧아질 수 없음
-                    if (!task.parentId && maxChildEnd !== null && ne < maxChildEnd) {
-                        ne = maxChildEnd;
-                    }
-                    task.end = ne;
-                }
+                let ns = dragStartLeft + cellDelta;
+                let ne = dragStartEnd + cellDelta;
+                if (ns >= 0 && ne <= totalCells) { task.start = ns; task.end = ne; }
+            } else if (dragType === 'left') {
+                let ns = dragStartLeft + cellDelta;
+                if (ns >= 0 && ns < task.end) task.start = ns;
+            } else if (dragType === 'right') {
+                let ne = dragStartEnd + cellDelta;
+                if (ne > task.start && ne <= totalCells) task.end = ne;
             }
-
-            // 자식이 개별 조정될 때 부모가 밀려나거나 품을 수 있도록 하는 자동 롤업 스케일러
-            if (task.parentId) {
-                syncParentBoundsToFitChildren(task.parentId);
-            }
-
-            renderAll();
+            renderRows();
         }
 
         function endDrag() {
@@ -875,75 +379,41 @@
             document.removeEventListener('mousemove', onDragMove);
             document.removeEventListener('mouseup', endDrag);
             saveData();
-            renderAll();
         }
 
-        function syncParentBoundsToFitChildren(parentId) {
-            const parent = projectTasks.find(t => t.id === parentId);
-            if (!parent) return;
-            const children = projectTasks.filter(t => t.parentId === parentId);
-            if (children.length === 0) return;
-
-            let minStart = Math.min(...children.map(c => c.start));
-            let maxEnd = Math.max(...children.map(c => c.end));
-
-            if (parent.start > minStart) parent.start = minStart;
-            if (parent.end < maxEnd) parent.end = maxEnd;
-        }
-
-        function addNewRow(parentId = null) {
-            const nextId = "t_" + Date.now();
-            let parentTask = projectTasks.find(t => t.id === parentId);
-            
-            let s = parentTask ? parentTask.start : cropStart;
-            let e = parentTask ? Math.min(parentTask.end, parentTask.start + 2) : Math.min(cropEnd, cropStart + 3);
-
-            projectTasks.push({
-                id: nextId,
-                name: parentId ? "↳ 세부 하위 워크 단계 태스크" : "새 마스터 대분류 프로젝트 범주 항목",
-                start: s,
-                end: e,
-                parentId: parentId,
-                open: true
+        function addNewRow() {
+            let tasks = getCurrentTasks();
+            tasks.push({
+                id: "item_" + Date.now(),
+                name: "새 작업 항목 명칭 기입",
+                start: 0,
+                end: currentMode === 'hour' ? 12 : 2
             });
-            if (parentId) syncParentBoundsToFitChildren(parentId);
-            saveData();
-            renderAll();
+            saveData(); renderRows();
         }
 
         function deleteRow(id) {
-            if (confirm("이 항목과 연계된 리소스를 모두 정리할까요?")) {
-                projectTasks = projectTasks.filter(t => t.id !== id && t.parentId !== id);
-                saveData();
-                renderAll();
-            }
+            let key = getCurrentStorageKey();
+            db[key] = db[key].filter(t => t.id !== id);
+            saveData(); renderRows();
         }
 
-        function updateLiveMarker() {
-            const now = new Date();
-            const marker = document.getElementById('live-timeline-marker');
-            let idx = -1;
+        function adjustZoom(amt) {
+            cellWidth = Math.max(25, Math.min(250, cellWidth + amt));
+            renderAll();
+        }
 
-            if (viewMode === 'hour') idx = now.getHours() + (now.getMinutes() / 60);
-            else if (viewMode === 'year') idx = now.getMonth() + (now.getDate() / 30);
-            else if (viewMode === 'day') idx = now.getDate() - 1;
-            
-            if (idx >= cropStart && idx <= cropEnd) {
-                let pos = 380 + ((idx - cropStart) * cellWidth);
-                marker.style.left = `${pos}px`;
-                marker.style.display = 'block';
-            } else {
-                marker.style.display = 'none';
+        function resetAllData() {
+            if (confirm("모든 뎁스의 타임라인 데이터베이스가 영구 삭제됩니다. 진행할까요?")) {
+                localStorage.clear(); location.reload();
             }
         }
 
         function renderAll() {
             renderHeader();
             renderRows();
-            updateLiveMarker();
         }
 
-        setInterval(updateLiveMarker, 30000);
         window.onload = init;
     </script>
 </body>
