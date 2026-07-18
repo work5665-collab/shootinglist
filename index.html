@@ -180,10 +180,11 @@
             titleBackup: "",
             inputBackups: {},
             collapsedNodes: {},
+            // 일단위 5분조절을 위해 dayStartSubUnit(0~287), dayEndSubUnit(0~287) 개념 추가 기입 관리
             tasks: [
-                { id: "p-1", parentId: null, name: "새로운 최상위 마스터 공정", start: 0, end: 120, color: "#3b82f6", checked: false },
-                { id: "p-2", parentId: "p-1", name: "└ 세부 서브 태스크 라인 1", start: 0, end: 45, color: "#a855f7", checked: false },
-                { id: "p-3", parentId: "p-1", name: "└ 세부 서브 태스크 라인 2", start: 60, end: 120, color: "#a855f7", checked: false }
+                { id: "p-1", parentId: null, name: "새로운 최상위 마스터 공정", start: 0, end: 120, dayStartUnit: 0, dayEndUnit: 144, color: "#3b82f6", checked: false },
+                { id: "p-2", parentId: "p-1", name: "└ 세부 서브 태스크 라인 1", start: 0, end: 45, dayStartUnit: 0, dayEndUnit: 72, color: "#a855f7", checked: false },
+                { id: "p-3", parentId: "p-1", name: "└ 세부 서브 태스크 라인 2", start: 60, end: 120, dayStartUnit: 72, dayEndUnit: 144, color: "#a855f7", checked: false }
             ]
         };
 
@@ -211,14 +212,21 @@
         }
 
         function init() {
-            const saved = localStorage.getItem('onset_tracker_absolute_v25');
+            const saved = localStorage.getItem('onset_tracker_absolute_v26');
             if (saved) state = JSON.parse(saved);
+            
+            // 데이터 마이그레이션 방어코드 (5분단위 유닛 기본값 보정)
+            state.tasks.forEach(t => {
+                if (t.dayStartUnit === undefined) t.dayStartUnit = 0;
+                if (t.dayEndUnit === undefined) t.dayEndUnit = 144;
+            });
+
             setupTitleInput();
             renderAll();
         }
 
         function saveData() {
-            localStorage.setItem('onset_tracker_absolute_v25', JSON.stringify(state));
+            localStorage.setItem('onset_tracker_absolute_v26', JSON.stringify(state));
         }
 
         function setupTitleInput() {
@@ -260,7 +268,7 @@
         function clearProjectFocus() { state.projectFocusId = null; saveData(); renderAll(); }
         function changeView(mode, m = 0, w = 0, d = 0) {
             state.viewMode = mode; state.focusMonth = m; state.focusWeek = w; state.focusDay = d;
-            if (mode === 'DAY') state.cellWidth = 75; // 일단위 뷰에서는 가독성을 위해 셀 기본크기 보정
+            if (mode === 'DAY') state.cellWidth = 35; // 288개 칸 가독성을 위한 가로 최적화폭 지정
             renderAll();
         }
 
@@ -273,8 +281,7 @@
                 return { start: currentWeek[0], end: currentWeek[currentWeek.length - 1] + 1 };
             }
             if (state.viewMode === 'DAY') {
-                // 일단위 뷰는 하루(1일)를 24시간 범위로 매핑
-                return { start: 0, end: 24 };
+                return { start: 0, end: 288 }; // 24시간 * 12구간 = 총 288개의 5분 단위 세부 그리드 유닛
             }
         }
 
@@ -322,14 +329,13 @@
                     g2.appendChild(sub);
                 });
             } else if (state.viewMode === 'DAY') {
-                // 🛠️ 일단위 집중뷰: 24시간 + 5분 단위 분할 렌더링
                 for (let h = 0; h < 24; h++) {
-                    const cell = document.createElement('div'); cell.className = 'main-time-cell'; cell.style.width = `${state.cellWidth * 12}px`; // 1시간 = 5분짜리 12개
+                    const cell = document.createElement('div'); cell.className = 'main-time-cell'; cell.style.width = `${state.cellWidth * 12}px`;
                     cell.innerText = `${h}시`; g1.appendChild(cell);
                     
                     for (let min = 0; min < 60; min += 5) {
                         const sub = document.createElement('div'); sub.className = 'sub-tick-cell'; sub.style.width = `${state.cellWidth}px`;
-                        sub.innerText = `${min === 0 ? '00' : min}분`; g2.appendChild(sub);
+                        sub.innerText = `${min === 0 ? '00' : min}`; g2.appendChild(sub);
                     }
                 }
             }
@@ -366,17 +372,26 @@
             if (!parent) return;
             let children = state.tasks.filter(t => t.parentId === parentId);
             if (children.length > 0) {
-                parent.start = Math.min(...children.map(c => c.start));
-                parent.end = Math.max(...children.map(c => c.end));
+                if (state.viewMode === 'DAY') {
+                    parent.dayStartUnit = Math.min(...children.map(c => c.dayStartUnit));
+                    parent.dayEndUnit = Math.max(...children.map(c => c.dayEndUnit));
+                } else {
+                    parent.start = Math.min(...children.map(c => c.start));
+                    parent.end = Math.max(...children.map(c => c.end));
+                }
             }
             if (parent.parentId) updateParentTimeChain(parent.parentId);
         }
 
-        function moveAllChildrenSet(parentId, delta) {
+        function moveAllChildrenSet(parentId, delta, isDayMode = false) {
             let children = state.tasks.filter(t => t.parentId === parentId);
             children.forEach(c => {
-                c.start += delta; c.end += delta;
-                moveAllChildrenSet(c.id, delta); 
+                if (isDayMode) {
+                    c.dayStartUnit += delta; c.dayEndUnit += delta;
+                } else {
+                    c.start += delta; c.end += delta;
+                }
+                moveAllChildrenSet(c.id, delta, isDayMode); 
             });
         }
 
@@ -386,7 +401,6 @@
         function onRowDragOver(e, targetId) {
             e.preventDefault(); if (rowDragSourceId === targetId) return;
             const targetRow = document.getElementById(`row-node-${targetId}`); if (!targetRow) return;
-            // 🛠️ 왼쪽 패널 근처로 드래그 유도 시 계층 탈출 트리거 활성화
             if (e.clientX < 290) {
                 targetRow.classList.remove('drag-over-active'); targetRow.classList.add('drag-left-escape');
             } else {
@@ -414,7 +428,6 @@
             while (p) { if (p.id === rowDragSourceId) { cyclical = true; break; } p = state.tasks.find(t => t.id === p.parentId); }
 
             if (!cyclical) {
-                // 🛠️ [복원] 좌측으로 당기면 소속을 해제하고 상위 레벨(부모의 형제레벨)로 탈출시킴
                 if (e.clientX < 290) { sourceTask.parentId = targetTask.parentId; } 
                 else { sourceTask.parentId = targetId; }
                 updateParentTimeChain(oldParentId); updateParentTimeChain(sourceTask.parentId);
@@ -428,7 +441,7 @@
             let newId = "p_" + Date.now() + "_" + Math.floor(Math.random()*1000);
             state.tasks.push({
                 id: newId, parentId: src.parentId, name: src.name + " (복사본)",
-                start: src.start, end: src.end, color: src.color, checked: false
+                start: src.start, end: src.end, dayStartUnit: src.dayStartUnit, dayEndUnit: src.dayEndUnit, color: src.color, checked: false
             });
             updateParentTimeChain(src.parentId); saveData(); renderAll();
         }
@@ -436,11 +449,11 @@
         function renderRows() {
             const container = document.getElementById('dynamic-rows-container'); container.innerHTML = '';
             let timeConfig = getActiveTimeRange();
-            
-            // 일단위 뷰에서는 24시간 * 12칸(5분 단위) = 288개 셀 구조
-            let totalVisibleUnits = (state.viewMode === 'DAY') ? 288 : (timeConfig.end - timeConfig.start);
+            let totalVisibleUnits = timeConfig.end - timeConfig.start;
 
-            let sortedTasks = [...state.tasks].sort((a, b) => a.start - b.start);
+            let sortedTasks = [...state.tasks].sort((a, b) => {
+                return state.viewMode === 'DAY' ? a.dayStartUnit - b.dayStartUnit : a.start - b.start;
+            });
             let treeSorted = [];
             function buildTree(pId) { sortedTasks.filter(t => t.parentId === pId).forEach(t => { treeSorted.push(t); buildTree(t.id); }); }
             buildTree(null);
@@ -540,15 +553,15 @@
                     rightTrack.appendChild(unit);
                 }
 
-                // 🛠️ [정밀 교정] 동일 줄 안에서 항목과 항목 사이에만 정확하게 자동 휴식 바 렌더링
-                let siblings = state.tasks.filter(t => t.parentId === task.parentId).sort((a,b)=>a.start - b.start);
+                // 항목 간 징검다리 휴식 및 정비 자동 바 생성 메커니즘 (일간 뷰가 아닐 때만 노출)
+                let siblings = state.tasks.filter(t => t.parentId === task.parentId).sort((a,b)=> state.viewMode === 'DAY' ? a.dayStartUnit - b.dayStartUnit : a.start - b.start);
                 let currentIdx = siblings.findIndex(s => s.id === task.id);
-                if (currentIdx > 0) {
+                if (currentIdx > 0 && state.viewMode !== 'DAY') {
                     let prevSibling = siblings[currentIdx - 1];
                     if (prevSibling.end < task.start) {
                         let rStart = Math.max(timeConfig.start, prevSibling.end);
                         let rEnd = Math.min(timeConfig.end, task.start);
-                        if (rStart < rEnd && state.viewMode !== 'DAY') {
+                        if (rStart < rEnd) {
                             const restBar = document.createElement('div');
                             restBar.className = 'time-bar-element rest-auto-bar';
                             restBar.style.left = `${(rStart - timeConfig.start) * state.cellWidth}px`;
@@ -559,40 +572,43 @@
                     }
                 }
 
-                // 메인 바 위치 계산
-                let oStart = task.start;
-                let oEnd = task.end;
+                // 바 위치 계산 렌더링
+                let oStart = (state.viewMode === 'DAY') ? task.dayStartUnit : task.start;
+                let oEnd = (state.viewMode === 'DAY') ? task.dayEndUnit : task.end;
                 let barRenderable = false;
 
-                if (state.viewMode === 'DAY') {
-                    // 일간 모드일 때는 하루 전체(288셀)에 꽉 채워서 보정 렌더링
-                    barRenderable = true;
-                    oStart = 0; oEnd = 24;
-                } else {
-                    let tRange = getActiveTimeRange();
-                    oStart = Math.max(tRange.start, task.start);
-                    oEnd = Math.min(tRange.end, task.end);
-                    if (oStart < oEnd) barRenderable = true;
-                }
+                let tRange = getActiveTimeRange();
+                oStart = Math.max(tRange.start, oStart);
+                oEnd = Math.min(tRange.end, oEnd);
+                if (oStart < oEnd) barRenderable = true;
 
                 if (barRenderable) {
                     const bar = document.createElement('div'); bar.className = 'time-bar-element';
                     bar.style.backgroundColor = task.color;
                     
-                    let leftOffset = (state.viewMode === 'DAY') ? 0 : (oStart - timeConfig.start);
-                    let widthUnits = (state.viewMode === 'DAY') ? 288 : (oEnd - oStart);
+                    let leftOffset = oStart - timeConfig.start;
+                    let widthUnits = oEnd - oStart;
 
                     bar.style.left = `${leftOffset * state.cellWidth}px`;
                     bar.style.width = `${(widthUnits * state.cellWidth) - 12}px`;
 
                     const hL = document.createElement('div'); hL.className = 'resizer';
                     const lbl = document.createElement('div'); lbl.className = 'bar-label';
-                    lbl.innerHTML = `<span>⏳ ${task.name} (${task.end - task.start}일간)</span>`;
                     
-                    // 🛠️ 상위/하위 상관없이 클릭 우선순위를 보장하기 위한 분리 레이어 처리
+                    // 라벨 분 단위 가독성 표기
+                    if (state.viewMode === 'DAY') {
+                        let startTotalMin = task.dayStartUnit * 5;
+                        let endTotalMin = task.dayEndUnit * 5;
+                        let sh = Math.floor(startTotalMin / 60); let sm = startTotalMin % 60;
+                        let eh = Math.floor(endTotalMin / 60); let em = endTotalMin % 60;
+                        lbl.innerHTML = `<span>⏳ ${task.name} (${sh}시 ${sm}분 ~ ${eh}시 ${em}분)</span>`;
+                    } else {
+                        lbl.innerHTML = `<span>⏳ ${task.name} (${task.end - task.start}일간)</span>`;
+                    }
+                    
                     let isMovingGuard = false;
                     bar.onmousedown = (e) => {
-                        if (e.target.classList.contains('resizer')) return; // 리사이저 클릭 패스
+                        if (e.target.classList.contains('resizer')) return;
                         if (e.buttons !== 1) return;
                         e.stopPropagation();
                         isMovingGuard = false;
@@ -610,8 +626,8 @@
 
                     const hR = document.createElement('div'); hR.className = 'resizer';
 
-                    // 상위 목록 길이 조절 봉인 규칙 유지
-                    if (!isParentNode && state.viewMode !== 'DAY') {
+                    // 상위 목록 길이 조절 봉인 수칙 유지
+                    if (!isParentNode) {
                         bar.appendChild(hL); bar.appendChild(lbl); bar.appendChild(hR);
                         hL.onmousedown = (e) => { e.stopPropagation(); startDrag(task.id, 'left', e.clientX); };
                         hR.onmousedown = (e) => { e.stopPropagation(); startDrag(task.id, 'right', e.clientX); };
@@ -631,7 +647,16 @@
             currentDragId = id; dragType = type; dragStartX = x;
             let task = state.tasks.find(t => t.id === id);
             if(!task) return;
-            dragStartS = task.start; dragStartE = task.end;
+            
+            // 🛠️ 일단위 모드와 일반 모드 분기 값 추출
+            if (state.viewMode === 'DAY') {
+                dragStartS = task.dayStartUnit;
+                dragStartE = task.dayEndUnit;
+            } else {
+                dragStartS = task.start;
+                dragStartE = task.end;
+            }
+            
             originalTasksState = JSON.parse(JSON.stringify(state.tasks));
             
             window.removeEventListener('mousemove', onDragMove, true);
@@ -641,7 +666,7 @@
         }
 
         function onDragMove(e) {
-            if (!currentDragId || state.viewMode === 'DAY') return; // 일간 모드에서는 드래그 수정 잠금
+            if (!currentDragId) return;
             e.stopPropagation();
             
             let deltaX = e.clientX - dragStartX;
@@ -650,36 +675,59 @@
             state.tasks = JSON.parse(JSON.stringify(originalTasksState));
             let task = state.tasks.find(t => t.id === currentDragId);
 
-            if (dragType === 'move') {
-                let ns = dragStartS + cellDelta; let ne = dragStartE + cellDelta;
-                if (ns < 0) { ne = task.end - task.start; ns = 0; }
-                if (ne > 365) { ns = 365 - (task.end - task.start); ne = 365; }
-                task.start = ns; task.end = ne; 
-                moveAllChildrenSet(task.id, ns - dragStartS);
-            } else if (dragType === 'left') {
-                let ns = dragStartS + cellDelta; if (ns >= 0 && ns < task.end) task.start = ns;
-            } else if (dragType === 'right') {
-                let ne = dragStartE + cellDelta; if (ne > task.start && ne <= 365) task.end = ne;
+            if (state.viewMode === 'DAY') {
+                // 🛠️ 일단위 5분 단위 스냅 드래그 가공 레이어
+                if (dragType === 'move') {
+                    let ns = dragStartS + cellDelta; let ne = dragStartE + cellDelta;
+                    if (ns < 0) { ne = task.dayEndUnit - task.dayStartUnit; ns = 0; }
+                    if (ne > 288) { ns = 288 - (task.dayEndUnit - task.dayStartUnit); ne = 288; }
+                    task.dayStartUnit = ns; task.dayEndUnit = ne; 
+                    moveAllChildrenSet(task.id, ns - dragStartS, true);
+                } else if (dragType === 'left') {
+                    let ns = dragStartS + cellDelta; if (ns >= 0 && ns < task.dayEndUnit) task.dayStartUnit = ns;
+                } else if (dragType === 'right') {
+                    let ne = dragStartE + cellDelta; if (ne > task.dayStartUnit && ne <= 288) task.dayEndUnit = ne;
+                }
+            } else {
+                // 기존 일반 스케일 드래그 레이어 유지
+                if (dragType === 'move') {
+                    let ns = dragStartS + cellDelta; let ne = dragStartE + cellDelta;
+                    if (ns < 0) { ne = task.end - task.start; ns = 0; }
+                    if (ne > 365) { ns = 365 - (task.end - task.start); ne = 365; }
+                    task.start = ns; task.end = ne; 
+                    moveAllChildrenSet(task.id, ns - dragStartS, false);
+                } else if (dragType === 'left') {
+                    let ns = dragStartS + cellDelta; if (ns >= 0 && ns < task.end) task.start = ns;
+                } else if (dragType === 'right') {
+                    let ne = dragStartE + cellDelta; if (ne > task.start && ne <= 365) task.end = ne;
+                }
             }
             updateParentTimeChain(task.parentId); renderRows();
         }
 
-        function endDrag(e) {
-            if (e) e.stopPropagation(); currentDragId = null;
+        function removeEventListeners() {
             window.removeEventListener('mousemove', onDragMove, true);
             window.removeEventListener('mouseup', endDrag, true);
+        }
+
+        function endDrag(e) {
+            if (e) e.stopPropagation(); currentDragId = null;
+            removeEventListeners();
             saveData(); renderAll(); 
         }
 
         function addNewRow() {
-            state.tasks.push({ id: "p_" + Date.now(), parentId: null, name: "새로운 최상위 마스터 공정", start: 0, end: 45, color: "#3b82f6", checked: false });
+            state.tasks.push({ id: "p_" + Date.now(), parentId: null, name: "새로운 최상위 마스터 공정", start: 0, end: 45, dayStartUnit: 0, dayEndUnit: 144, color: "#3b82f6", checked: false });
             saveData(); renderAll();
         }
 
         function addChildRow(pId) {
             let p = state.tasks.find(t => t.id === pId);
             state.tasks.push({
-                id: "p_" + Date.now(), parentId: pId, name: "└ 세부 서브 태스크 라인", start: p.start, end: Math.min(p.end, p.start + 15), color: p.color, checked: false
+                id: "p_" + Date.now(), parentId: pId, name: "└ 세부 서브 태스크 라인", 
+                start: p.start, end: Math.min(p.end, p.start + 15), 
+                dayStartUnit: p.dayStartUnit, dayEndUnit: Math.min(p.dayEndUnit, p.dayStartUnit + 72),
+                color: p.color, checked: false
             });
             state.collapsedNodes[pId] = false; updateParentTimeChain(pId); saveData(); renderAll();
         }
@@ -698,7 +746,6 @@
         function restoreTask(id) { let task = state.tasks.find(t => t.id === id); if (task) { task.checked = false; saveData(); renderAll(); } }
         function toggleArchiveView() { document.getElementById('archive-content-panel').classList.toggle('open'); }
         
-        // 🛠️ 1월부터 12월이 화면에 다 보이도록 배율 축소 한계폭 완화 (최소값 5로 하향조정)
         function adjustZoom(amt) { state.cellWidth = Math.max(5, Math.min(200, state.cellWidth + amt)); renderAll(); }
         function resetAllData() { if (confirm("모든 데이터를 포맷팅하시겠습니까?")) { localStorage.clear(); location.reload(); } }
 
